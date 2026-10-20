@@ -2,6 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data:; connect-src https://jekxycvbfnsivquctlrv.supabase.co wss://jekxycvbfnsivquctlrv.supabase.co; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Urenregistratie</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%8F%B1%EF%B8%8F%3C/text%3E%3C/svg%3E">
@@ -403,6 +404,23 @@ if(!people[cur])return;if(f==="tl"){var Q=clone();Q.tl=e.checked;persist(Q);retu
 var P=clone(),m={nm:"name",ct:"ct",bs:"bs",fr:"from",to:"to"};
 P[m[f]]=(f==="ct"||f==="bs")?(+e.value||0):e.value;persist(P)});
 
+/*SAN*/
+var RD=/^\d{4}-\d{2}-\d{2}$/,RT=/^\d{2}:\d{2}$/,RID=/^[A-Za-z0-9_-]{1,60}$/,TY={werk:1,vakantie:1,ziek:1,overig:1,onbetaald:1,gekocht:1,dagdeel:1};
+function nm(x){x=+x;return isFinite(x)?x:0}
+function cleanProfile(P){
+if(!P||typeof P!=="object")P={};
+var o={name:String(P.name||"").slice(0,100),ct:nm(P.ct),bs:nm(P.bs),from:RD.test(P.from)?P.from:"",to:RD.test(P.to)?P.to:"",tl:!!P.tl,wd:[],items:[],kp:[]};
+if(Array.isArray(P.wd))o.wd=P.wd.map(Number).filter(function(x){return x>=0&&x<=6&&x%1===0}).slice(0,7);
+(Array.isArray(P.items)?P.items:[]).forEach(function(i){
+if(!i||typeof i!=="object"||!RID.test(String(i.id))||!RD.test(i.d)||!TY[i.t])return;
+var n={id:String(i.id),d:i.d,t:i.t,o:String(i.o||"").slice(0,500)};
+if(i.g&&RID.test(String(i.g)))n.g=String(i.g);
+if(i.t==="werk"||i.t==="dagdeel"){if(!RT.test(i.s)||!RT.test(i.e))return;n.s=i.s;n.e=i.e;n.p=nm(i.p)}else n.h=nm(i.h);
+o.items.push(n)});
+(Array.isArray(P.kp)?P.kp:[]).forEach(function(k){if(k&&typeof k==="object"&&RID.test(String(k.id))&&RD.test(k.d))o.kp.push({id:String(k.id),d:k.d,h:nm(k.h),o:String(k.o||"").slice(0,500)})});
+return o}
+function cleanHol(a){return (Array.isArray(a)?a:[]).filter(function(h){return h&&typeof h==="object"&&RD.test(h.d)}).map(function(h){return {d:h.d,n:String(h.n||"").slice(0,100)}})}
+/*ENDSAN*/
 var SB_URL="https://jekxycvbfnsivquctlrv.supabase.co",SB_KEY="sb_publishable_rwQ1xtkuvPpzlD7l2Jwtew_lIE2MdFp",REDIR=location.origin+location.pathname,recovery=/type=recovery/.test(location.hash+location.search);
 function authUI(msg,mode){
 var h='<div class="card" style="max-width:420px;margin:24px auto"><h2>'+(mode==="reset"?"Nieuw wachtwoord kiezen":"Inloggen")+'</h2>';
@@ -419,8 +437,8 @@ if(r.error){fail(r.error);return}
 adminSet={};(r.data||[]).forEach(function(x){adminSet[x.user_id]=1});admin=!!adminSet[uid];if(admin)tab="admin";
 Promise.all([sb.from("settings").select("data").eq("key","holidays").maybeSingle(),sb.from("profiles").select("id,email,data")]).then(function(rs){
 var a=rs[0],b=rs[1];if(a.error||b.error){fail(a.error||b.error);return}
-hol=(a.data&&a.data.data&&a.data.data.days)||[];people={};emails={};
-(b.data||[]).forEach(function(x){people[x.id]=x.data;emails[x.id]=x.email||""});
+hol=cleanHol(a.data&&a.data.data&&a.data.data.days);people={};emails={};
+(b.data||[]).forEach(function(x){people[x.id]=cleanProfile(x.data);emails[x.id]=x.email||""});
 loaded=true;render()})})}
 (function(){
 if(!window.supabase){$("app").innerHTML='<div class="card">De verbinding met de server kon niet worden geladen. Controleer je internetverbinding en vernieuw de pagina.</div>';return}
