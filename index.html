@@ -76,7 +76,7 @@ function iso(t){return new Date(t).toISOString().slice(0,10)}
 function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 var peil=today(),openOv=false,dayModal=null,editId=null,delAsk=null,sec="home";
 document.addEventListener("click",function(e){var p=$("dpop");if(p&&!p.classList.contains("hide")&&!e.target.closest("#dpop")&&e.target.id!=="dv")p.classList.add("hide")},true);
-function toast(t){var e=$("toast");if(!e){e=document.createElement("div");e.id="toast";e.style.cssText="position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:#222;color:#fff;padding:12px 14px;border-radius:10px;z-index:100;text-align:center";document.body.appendChild(e)}e.textContent=t;e.style.display="block";clearTimeout(e._t);e._t=setTimeout(function(){e.style.display="none"},3500)}
+function toast(t){var e=$("toast");if(!e){e=document.createElement("div");e.id="toast";e.style.cssText="position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:#222;color:#fff;padding:12px 14px;border-radius:10px;z-index:100;text-align:center";document.body.appendChild(e)}e.textContent=t;e.style.display="block";clearTimeout(e._t);e._t=setTimeout(function(){e.style.display="none"},Math.max(3500,String(t).length*70))}
 window.alert=function(t){toast(t)};
 function wdn(P){return P.wd&&P.wd.length?P.wd.length:5}
 function wdBox(P){var s=P.wd&&P.wd.length?P.wd:[1,2,3,4,5],n=["Zo","Ma","Di","Wo","Do","Vr","Za"],o=[1,2,3,4,5,6,0],h='<div class="full"><label>Vaste werkdagen (contracturen worden hierover verdeeld)</label><div class="wdr">';
@@ -193,18 +193,20 @@ function sd(ds){return ds?ds.split("-").reverse().join("-"):""}
 function kpRest(P){var t=0,u=0;(P.kp||[]).forEach(function(x){t+=(+x.h||0)*60});(P.items||[]).forEach(function(i){if(i.t==="gekocht")u+=mins(i)});return t-u}
 function tileH(cls,a,v,l,val,sub){return '<button class="tile '+cls+'" data-a="'+a+'" data-v="'+v+'"><span class="tl">'+l+'</span><span class="tv">'+val+'</span><span class="ts">'+sub+'</span></button>'}
 function viewUren(P){
-viewUrenOld(P);var q=PARTS,c=q.c;q.ort=ortSection(P);
+viewUrenOld(P);var q=PARTS,c=q.c;q.ort=ortSection(P);q.vs=vsSection(P);
 if(sec!=="home"&&q[sec])return '<button class="btn2 back" data-a="sec" data-v="home">\u2190 Terug</button>'+q[sec];
 var f=P.from||"0000-00-00",t=P.to||"9999-12-31",n=(P.items||[]).filter(function(i){return i.d>=f&&i.d<=t}).length,kr=kpRest(P);
+var vr=vsYear(P,new Date().getFullYear()),vsTile=vr?dh(vr.rest.wet+vr.rest.bov+vr.rest.extra-vr.tekort)+" u":"–",vsSub=vr?"resterend in "+new Date().getFullYear():"nog niet ingesteld";
 var h='<div class="hello">Hallo'+(P.name?", "+esc(P.name):"")+' \ud83d\udc4b</div><div class="tiles">';
 h+=tileH("ac w2","sec","add","Nieuw","\u2795 Uren toevoegen","Dienst, vakantie, verlof of ziekte");
 h+=tileH("w2 sd","sec","saldo","\u2696\ufe0f Saldo",c?'<span class="'+(c.saldo>=0?"plus":"min")+'">'+fmt(c.saldo,true)+'</span>':"\u2013",c?"tot en met "+sd(q.pd):"Stel een periode in");
 h+=tileH("","sec","vak","\ud83c\udf34 Vakantie",c?fmt(c.by.vakantie+c.by.dagdeel):"\u2013",c?"onbetaald "+fmt(c.by.onbetaald):"Stel een periode in");
+h+=tileH("","sec","vs","🌴 Vakantiesaldo",vsTile,vsSub);
 h+=tileH("","sec","kp","\ud83d\udcb3 Gekochte uren",'<span class="'+(kr>=0?"plus":"min")+'">'+fmt(kr)+'</span>',"resterend");
 h+=tileH("","tab","jaar","\ud83d\udcc5 Jaaroverzicht","Kalender","bekijk per dag");
 h+=tileH("","sec","list","\ud83d\udccb Registraties",n,"in deze periode");
 h+=tileH("","sec","ort","🧾 ORT-uitdraai","Per datum","toeslaguren afdrukken");
-h+=tileH("","sec","cfg","\u2699\ufe0f Contract en periode",(+P.ct||0)+" u/week",P.from?sd(P.from)+" t/m "+(P.to?sd(P.to):"\u2026"):"Nog geen periode ingesteld");
+h+=tileH("w2","sec","cfg","\u2699\ufe0f Contract en periode",(+P.ct||0)+" u/week",P.from?sd(P.from)+" t/m "+(P.to?sd(P.to):"\u2026"):"Nog geen periode ingesteld");
 return h+"</div>"}
 var cm=null;
 function dayText(ds){var P=people[cur]||{},its=(P.items||[]).filter(function(i){return i.d===ds});if(!its.length)return "Nog niets ingevuld op deze dag";return "Al ingevuld: "+its.map(function(i){return TYPES[i.t]+" "+fmt(mins(i))+(i.t==="werk"?" ("+i.s+" \u2013 "+i.e+")":"")}).join("; ")}
@@ -276,6 +278,57 @@ D.rows.forEach(function(r){var d=r.it.d;L.push([d.split("-").reverse().join("-")
 L.push(["Totaal","","",""].concat([20,40,75,100].map(function(k){return dh(D.T[k])}),[dh(D.eq)]).join(";"));
 var blob=new Blob(["\ufeff"+L.join("\r\n")],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="ort-"+ortFrom+"-"+ortTo+".csv";document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u)},500)}
 /*ENDORT*/
+/*OVL*/
+function span(it){
+if(!(it.t==="werk"||it.t==="dagdeel")||!it.s||!it.e)return null;
+var a=it.s.split(":"),b=it.e.split(":"),s=+a[0]*60+ +a[1],e=+b[0]*60+ +b[1];if(e<s)e+=1440;if(e<=s)return null;
+var base=Math.round(utc(it.d)/864e5)*1440;return [base+s,base+e]}
+function conflict(P,cand,skipId){
+var sp=span(cand),items=P.items||[];
+for(var i=0;i<items.length;i++){var o=items[i];if(o.id===skipId)continue;var so=span(o);
+if(sp&&so){if(sp[0]<so[1]&&so[0]<sp[1])return o}
+else if(!sp&&!so&&o.d===cand.d&&o.t===cand.t)return o}
+return null}
+function conflictMsg(o){return o.s?"Dit overlapt met een bestaande registratie: "+TYPES[o.t]+" op "+nl(o.d)+" van "+o.s+" tot "+o.e+". Pas die aan of kies andere tijden.":"Er staat al "+TYPES[o.t]+" op "+nl(o.d)+". Pas die registratie aan in plaats van een tweede toe te voegen."}
+/*ENDOVL*/
+/*VS*/
+var VSC=[["wet","Wettelijk verlof"],["bov","Bovenwettelijk verlof"],["extra","Extra bovenwettelijk verlof"]],VSCN={wet:"Wettelijk verlof",bov:"Bovenwettelijk verlof",extra:"Extra bovenwettelijk verlof"},vsY=new Date().getFullYear(),vsForm=null;
+function vsUsed(P,y){var u=0;(P.items||[]).forEach(function(i){if((i.t==="vakantie"||i.t==="dagdeel")&&i.d.slice(0,4)===String(y))u+=mins(i)});return u}
+function vsYear(P,y){
+var vs=P.vs||[];if(!vs.length)return null;
+var y0=Math.min.apply(null,vs.map(function(e){return e.y}));if(y<y0)return null;
+var carry={wet:0,bov:0,extra:0},res=null;
+for(var yy=y0;yy<=y;yy++){
+var g={wet:0,bov:0,extra:0},c={wet:0,bov:0,extra:0};
+vs.forEach(function(e){if(e.y===yy){if(e.k==="opvoer")g[e.c]+=e.h*60;else c[e.c]+=e.h*60}});
+var avail={},used={wet:0,bov:0,extra:0},left=vsUsed(P,yy),rest={};
+VSC.forEach(function(k){var kk=k[0];avail[kk]=carry[kk]+g[kk]+c[kk];var take=Math.min(left,Math.max(avail[kk],0));used[kk]=take;left-=take;rest[kk]=avail[kk]-take});
+res={y:yy,carry:carry,grant:g,corr:c,used:used,rest:rest,tekort:left};
+carry={wet:rest.wet-left,bov:rest.bov,extra:rest.extra}}
+return res}
+function vsSection(P){
+var y=vsY,R=vsYear(P,y),dg=(+P.ct||0)*60/wdn(P)||1;
+var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><button class="btn2" data-a="vsy" data-v="-1">\u2039</button><h2 style="margin:0">Vakantiesaldo '+y+'</h2><button class="btn2" data-a="vsy" data-v="1">\u203a</button></div>';
+if(!R)h+='<div class="empty">Nog geen verlofsaldo ingevoerd voor '+y+' of eerder. Kies Verlof aanvullen om te beginnen.</div>';
+else{
+var tot=R.rest.wet+R.rest.bov+R.rest.extra-R.tekort;
+h+='<div class="big '+(tot>=0?"plus":"min")+'">'+dh(tot)+' u</div><div class="sub">resterend (ongeveer '+String(Math.round(tot/dg*10)/10).replace(".",",")+' dagen)</div>';
+h+='<div style="overflow-x:auto"><table class="ort"><thead><tr><th></th><th class="r">Mee</th><th class="r">Erbij</th><th class="r">Corr.</th><th class="r">Op</th><th class="r">Rest</th></tr></thead><tbody>';
+VSC.forEach(function(k){var c=k[0];h+='<tr><td>'+k[1]+'</td><td class="r">'+dh(R.carry[c])+'</td><td class="r">'+dh(R.grant[c])+'</td><td class="r">'+dh(R.corr[c])+'</td><td class="r">'+dh(R.used[c])+'</td><td class="r"><b>'+dh(R.rest[c])+'</b></td></tr>'});
+if(R.tekort>0)h+='<tr><td>Tekort</td><td></td><td></td><td></td><td class="r">'+dh(R.tekort)+'</td><td class="r min"><b>-'+dh(R.tekort)+'</b></td></tr>';
+h+='</tbody></table></div><div class="sub" style="margin-top:6px">Mee = uit het vorige jaar meegenomen. Erbij = opgevoerd. Corr. = correcties. Op = vakantie en verlof dagdeel in '+y+', eerst van wettelijk, dan bovenwettelijk, dan extra bovenwettelijk. Alles in uren.</div>'}
+h+='<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" style="margin:0;width:auto;padding:10px 16px" data-a="vsform" data-v="aanvullen">Verlof aanvullen '+y+'</button><button class="btn2" data-a="vsform" data-v="correctie">Correctie</button></div>';
+if(vsForm==="aanvullen"){
+var py={wet:0,bov:0,extra:0};(P.vs||[]).forEach(function(e){if(e.y===y-1&&e.k==="opvoer")py[e.c]+=e.h});
+var ids={wet:"vw",bov:"vb",extra:"ve"};
+h+='<div class="ent"><div class="sub" style="margin-bottom:8px">Vul de uren in die je in '+y+' erbij krijgt. Het is vooraf ingevuld met wat je vorig jaar erbij kreeg. Verlof dat je vorig jaar niet hebt opgenomen, wordt vanzelf meegenomen.</div><div class="grid">'+VSC.map(function(k){return '<div class="full"><label>'+k[1]+' (uren)</label><input type="number" id="'+ids[k[0]]+'" min="0" step="0.25" value="'+(py[k[0]]||"")+'"></div>'}).join("")+'</div><button class="btn" data-a="vsadd">Opslaan</button></div>'}
+if(vsForm==="correctie"){
+h+='<div class="ent"><div class="sub" style="margin-bottom:8px">Gebruik een min voor aftrek, bijvoorbeeld -4. Een reden is verplicht.</div><div class="grid"><div class="full"><label>Soort verlof</label><select id="vc">'+VSC.map(function(k){return '<option value="'+k[0]+'">'+k[1]+'</option>'}).join("")+'</select></div><div class="full"><label>Aantal uren (+ of -)</label><input type="number" id="vh" step="0.25"></div><div class="full"><label>Reden</label><input id="vo" placeholder="Bijv. verkeerd aantal uren in het contract"></div></div><button class="btn" data-a="vscorr">Correctie opslaan</button></div>'}
+var es=(P.vs||[]).filter(function(e){return e.y===y}).sort(function(a,b){return a.d<b.d?1:-1});
+if(es.length){h+='<h2 style="margin-top:14px">Aangevuld en gecorrigeerd in '+y+'</h2>';
+es.forEach(function(e){h+='<div class="row"><div><div>'+VSCN[e.c]+(e.k==="correctie"?" (correctie)":" (opgevoerd)")+'</div><div class="sub">'+nl(e.d)+(e.o?' \u00b7 '+esc(e.o):"")+'</div></div><div class="tot">'+(e.h>0?"+":"")+dh(e.h*60)+' u<button class="del" data-a="delvs" data-id="'+e.id+'" aria-label="Verwijderen">\u00d7</button></div></div>'})}
+return h+'</div>'}
+/*ENDVS*/
 function viewJaar(P){
 var hm=hmap(),st={};
 (P.items||[]).forEach(function(it){var s=st[it.d]||(st[it.d]={});s[it.t]=(s[it.t]||0)+mins(it)});
@@ -334,7 +387,15 @@ $("olab").textContent=w?"Opmerkingen":"Reden";$("o").placeholder=w?"Optioneel, b
 document.addEventListener("click",function(ev){
 var b=ev.target.closest&&ev.target.closest("[data-a]");if(!b)return;
 var a=b.getAttribute("data-a"),v=b.getAttribute("data-v"),id=b.getAttribute("data-id"),P;
-if(a==="ortprint"){window.print()}
+if(a==="vsy"){vsY+= +v;vsForm=null;render()}
+else if(a==="vsform"){vsForm=vsForm===v?null:v;render()}
+else if(a==="vsadd"){var vv={wet:+$("vw").value||0,bov:+$("vb").value||0,extra:+$("ve").value||0},tk=Object.keys(vv).filter(function(k){return vv[k]>0});
+if(!tk.length){alert("Vul bij minstens \u00e9\u00e9n soort verlof het aantal uren in.");return}
+P=clone();P.vs=(P.vs||[]).concat(tk.map(function(k,i){return {id:Date.now()+"-"+i,y:vsY,c:k,k:"opvoer",h:vv[k],d:today(),o:""}}));vsForm=null;toast("Verlof aangevuld \u2713");persist(P)}
+else if(a==="vscorr"){var ch=+$("vh").value,cr=$("vo").value.trim();if(!ch){alert("Vul het aantal uren in, met een min voor aftrek.");return}if(!cr){alert("Vul een reden in voor de correctie.");return}
+P=clone();P.vs=(P.vs||[]).concat([{id:Date.now()+"",y:vsY,c:$("vc").value,k:"correctie",h:ch,d:today(),o:cr}]);vsForm=null;toast("Correctie opgeslagen \u2713");persist(P)}
+else if(a==="delvs"){var ve0=((people[cur]||{}).vs||[]).filter(function(x){return x.id===id})[0];if(!ve0)return;delAsk={id:id,g:"",d:ve0.d,vs:1};render()}
+else if(a==="ortprint"){window.print()}
 else if(a==="ortcsv"){ortCsv(people[cur])}
 else if(a==="ortm"){var n0=new Date(),m0=n0.getMonth()+ +v;ortFrom=iso(Date.UTC(n0.getFullYear(),m0,1));ortTo=iso(Date.UTC(n0.getFullYear(),m0+1,0));render()}
 else if(a==="login"){sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value}).then(function(r){if(r.error)authUI("Inloggen mislukt: "+r.error.message,"in");else start(r.data.session)})}
@@ -358,6 +419,8 @@ else if(a==="canceledit"){editId=null;render()}
 else if(a==="saveedit"){P=clone();var q=(P.items||[]).filter(function(i){return i.id===id})[0];if(!q)return;
 if(q.t==="werk"||q.t==="dagdeel"){if(!$("es").value||!$("ee").value){alert("Vul start en einde in.");return}q.s=$("es").value;q.e=$("ee").value;q.p=+$("ep").value||0}
 else{if(!($("eh").value>0)){alert("Vul het aantal uren in.");return}q.h=+$("eh").value}
+if((q.t==="werk"||q.t==="dagdeel")&&q.s===q.e){alert("Start en einde zijn gelijk.");return}
+var cf2=conflict(P,q,q.id);if(cf2){alert(conflictMsg(cf2));return}
 q.o=$("eo").value.trim();editId=null;persist(P)}
 else if(a==="tab"){tab=v;dayModal=null;sec="home";render()}
 else if(a==="yr"){yr+= +v;render()}
@@ -367,7 +430,7 @@ else if(a==="create"){var g=function(k){var e=document.querySelector('[data-f="'
 persist({name:g("nm"),ct:+g("ct")||0,bs:+g("bs")||0,from:g("fr"),to:g("to"),wd:[].slice.call(document.querySelectorAll('[data-f="wd"]:checked')).map(function(x){return +x.getAttribute("data-v")}),items:[]})}
 else if(a==="add"){var d=$("d").value,t=$("t").value;if(!d){alert("Vul een datum in.");return}
 var it={id:Date.now()+"",d:d,t:t,o:$("o").value.trim()};
-if(t==="werk"||t==="dagdeel"){if(!$("s").value||!$("e").value){alert("Vul start en einde in.");return}it.s=$("s").value;it.e=$("e").value;it.p=t==="werk"?(+$("p").value||0):0}
+if(t==="werk"||t==="dagdeel"){if(!$("s").value||!$("e").value){alert("Vul start en einde in.");return}it.s=$("s").value;it.e=$("e").value;it.p=t==="werk"?(+$("p").value||0):0;if(it.s===it.e){alert("Start en einde zijn gelijk.");return}}
 else{if(!($("h").value>0)){alert("Vul het aantal uren in.");return}it.h=+$("h").value}
 P=clone();var list=[it],tm=t==="werk"||t==="dagdeel"?"":$("tm").value;
 if(tm){if(tm<d){alert("De einddatum ligt vóór de begindatum.");return}
@@ -379,13 +442,14 @@ if(wl2.indexOf(dw)<0){var mon=utc(d)-((dw+6)%7)*864e5,hm3=hmap(),gid2=it.id;list
 for(var y=0;y<7;y++){var dy=mon+y*864e5,dss=iso(dy);if(wl2.indexOf(new Date(dy).getUTCDay())>=0&&!hm3[dss])list.push({id:gid2+"-"+list.length,g:gid2,d:dss,t:t,o:it.o,h:it.h})}
 if(!list.length){alert("Geen vaste werkdagen in deze week (feestdagen uitgezonderd).");return}
 if(!confirm("Deze dag is geen vaste werkdag. De hele week wordt als "+TYPES[t].toLowerCase()+" gezien: "+list.length+" werkdag(en) van "+it.h+" uur worden geregistreerd. Doorgaan?"))return}}
+for(var qi=0;qi<list.length;qi++){var cf=conflict(P,list[qi]);if(cf){alert(conflictMsg(cf));return}}
 P.items=(P.items||[]).concat(list);sec="home";toast("Toegevoegd \u2713");persist(P)}
 else if(a==="del"){P=people[cur];var it00=(P.items||[]).filter(function(i){return i.id===id})[0];if(!it00)return;delAsk={id:id,g:it00.g||"",d:it00.d};render()}
 else if(a==="addkp"){var kd=$("kd").value,kh=+$("kh").value;if(!kd||!(kh>0)){alert("Vul datum en aantal uren in.");return}
 P=clone();P.kp=(P.kp||[]).concat([{id:Date.now()+"",d:kd,h:kh,o:$("ko").value.trim()}]);persist(P)}
 else if(a==="delkp"){var kk=((people[cur]||{}).kp||[]).filter(function(x){return x.id===id})[0];if(!kk)return;delAsk={id:id,g:"",d:kk.d,kp:1};render()}
 else if(a==="delno"){delAsk=null;render()}
-else if(a==="delyes"){var dg2=delAsk;if(!dg2)return;delAsk=null;P=clone();if(dg2.kp){P.kp=(P.kp||[]).filter(function(x){return x.id!==dg2.id});persist(P);return}P.items=(P.items||[]).filter(function(i){return v==="all"&&dg2.g?i.g!==dg2.g:i.id!==dg2.id});persist(P)}
+else if(a==="delyes"){var dg2=delAsk;if(!dg2)return;delAsk=null;P=clone();if(dg2.vs){P.vs=(P.vs||[]).filter(function(x){return x.id!==dg2.id});persist(P);return}if(dg2.kp){P.kp=(P.kp||[]).filter(function(x){return x.id!==dg2.id});persist(P);return}P.items=(P.items||[]).filter(function(i){return v==="all"&&dg2.g?i.g!==dg2.g:i.id!==dg2.id});persist(P)}
 else if(a==="del_old"){P=clone();var it0=(P.items||[]).filter(function(i){return i.id===id})[0];if(!it0)return;var all=false;
 if(it0.g){if(confirm("Deze dag hoort bij een periode (vakantie of verlof). Klik op OK om alle dagen van deze periode te verwijderen, of op Annuleren om daarna alleen deze dag te kiezen."))all=true;else if(!confirm("U staat op het punt alleen de registratie van "+nl(it0.d)+" te verwijderen. Weet u het zeker?"))return}
 else if(!confirm("U staat op het punt de registratie van "+nl(it0.d)+" te verwijderen. Weet u het zeker?"))return;
@@ -409,7 +473,7 @@ var RD=/^\d{4}-\d{2}-\d{2}$/,RT=/^\d{2}:\d{2}$/,RID=/^[A-Za-z0-9_-]{1,60}$/,TY={
 function nm(x){x=+x;return isFinite(x)?x:0}
 function cleanProfile(P){
 if(!P||typeof P!=="object")P={};
-var o={name:String(P.name||"").slice(0,100),ct:nm(P.ct),bs:nm(P.bs),from:RD.test(P.from)?P.from:"",to:RD.test(P.to)?P.to:"",tl:!!P.tl,wd:[],items:[],kp:[]};
+var o={name:String(P.name||"").slice(0,100),ct:nm(P.ct),bs:nm(P.bs),from:RD.test(P.from)?P.from:"",to:RD.test(P.to)?P.to:"",tl:!!P.tl,wd:[],items:[],kp:[],vs:[]};
 if(Array.isArray(P.wd))o.wd=P.wd.map(Number).filter(function(x){return x>=0&&x<=6&&x%1===0}).slice(0,7);
 (Array.isArray(P.items)?P.items:[]).forEach(function(i){
 if(!i||typeof i!=="object"||!RID.test(String(i.id))||!RD.test(i.d)||!TY[i.t])return;
@@ -417,6 +481,7 @@ var n={id:String(i.id),d:i.d,t:i.t,o:String(i.o||"").slice(0,500)};
 if(i.g&&RID.test(String(i.g)))n.g=String(i.g);
 if(i.t==="werk"||i.t==="dagdeel"){if(!RT.test(i.s)||!RT.test(i.e))return;n.s=i.s;n.e=i.e;n.p=nm(i.p)}else n.h=nm(i.h);
 o.items.push(n)});
+(Array.isArray(P.vs)?P.vs:[]).forEach(function(e){if(e&&typeof e==="object"&&RID.test(String(e.id))&&RD.test(e.d)&&/^(wet|bov|extra)$/.test(e.c)&&/^(opvoer|correctie)$/.test(e.k)&&Number.isInteger(+e.y)&&+e.y>=1990&&+e.y<=2200)o.vs.push({id:String(e.id),y:+e.y,c:e.c,k:e.k,h:nm(e.h),d:e.d,o:String(e.o||"").slice(0,300)})});
 (Array.isArray(P.kp)?P.kp:[]).forEach(function(k){if(k&&typeof k==="object"&&RID.test(String(k.id))&&RD.test(k.d))o.kp.push({id:String(k.id),d:k.d,h:nm(k.h),o:String(k.o||"").slice(0,500)})});
 return o}
 function cleanHol(a){return (Array.isArray(a)?a:[]).filter(function(h){return h&&typeof h==="object"&&RD.test(h.d)}).map(function(h){return {d:h.d,n:String(h.n||"").slice(0,100)}})}
