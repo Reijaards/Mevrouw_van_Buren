@@ -45,6 +45,9 @@ button{font:inherit;cursor:pointer}
 .ovs{cursor:pointer;padding:10px 14px;border:1px solid var(--bd);border-radius:12px;background:var(--card);font-size:14px;color:var(--mu);margin-bottom:12px}.ovs b{font-size:15px}details#ov[open]>.ovs{margin-bottom:16px}
 .dn{font-size:13px;color:var(--ac);margin-top:3px;min-height:18px}
 .cal span[data-a]{cursor:pointer}.ent{padding:8px 0;border-top:1px solid var(--bd)}
+.ort{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}.ort th,.ort td{padding:6px 4px;border-bottom:1px solid var(--bd);text-align:left}.ort .r{text-align:right}.ort tfoot td{font-weight:700}
+@media print{:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--bg:#fff;--card:#fff;--tx:#000;--mu:#444;--bd:#bbb;color-scheme:light}
+body *{visibility:hidden}#ortrep,#ortrep *{visibility:visible}#ortrep{position:absolute;left:0;top:0;width:100%;border:0}.noprint{display:none!important}}
 .hello{font-size:19px;font-weight:600;margin:0 0 14px}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
 .tile{display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-height:96px;padding:14px;text-align:left;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:18px}
@@ -174,7 +177,7 @@ if(i.t==="werk"){nw++;tp+=+i.p||0;tm+=mins(i);h+='<div class="kv"><span>Gewerkt 
 else h+='<div class="kv"><span>🌴 '+TYPES[i.t]+(i.s?" "+i.s+" \u2013 "+i.e:"")+'</span><span>'+fmt(mins(i))+'</span></div>';
 if(i.o)h+='<div class="sub">Opmerking: '+esc(i.o)+'</div>';
 h+='<div style="display:flex;gap:8px;margin-top:6px"><button class="btn2" data-a="edit" data-id="'+i.id+'">Aanpassen</button><button class="btn2" style="color:var(--dg)" data-a="del" data-id="'+i.id+'">Verwijderen</button></div></div>'});
-if(nw)h+='<div class="kv"><span>Totaal pauze</span><span>'+tp+' min</span></div><div class="kv"><span>Totaal uren gewerkt</span><span><b>'+fmt(tm)+'</b></span></div>';
+if(nw)h+='<div class="kv"><span>Totaal pauze</span><span>'+tp+' min</span></div><div class="kv"><span>Totaal uren gewerkt</span><span><b>'+fmt(tm)+'</b></span></div>';if(nw){var ot3=ortSum(its.filter(function(i){return i.t==="werk"}));if(ot3.eq>.5)h+=ortRows(ot3)}
 return h+'<button class="btn" data-a="closeday">Sluiten</button></div></div>'}
 function delModal(){var g=delAsk.g,h='<div class="mo" style="z-index:60"><div style="position:absolute;inset:0" data-a="delno"></div><div class="md"><h2 style="font-size:17px">Verwijderen?</h2><p>'+(g?'U staat op het punt de registratie van <b>'+nl(delAsk.d)+'</b> te verwijderen. Deze dag hoort bij een periode (vakantie of verlof). Wilt u alleen deze dag verwijderen of alle dagen van de periode?':'U staat op het punt de registratie van <b>'+nl(delAsk.d)+'</b> te verwijderen. Weet u het zeker?')+'</p>';
 h+='<div style="display:flex;flex-direction:column;gap:8px">'+(g?'<button class="btn2" style="color:var(--dg)" data-a="delyes" data-v="one">Alleen deze dag verwijderen</button><button class="btn2" style="color:var(--dg)" data-a="delyes" data-v="all">Alle dagen van de periode verwijderen</button>':'<button class="btn2" style="color:var(--dg)" data-a="delyes" data-v="one">Ja, verwijderen</button>')+'<button class="btn2" data-a="delno">Annuleren</button></div></div></div>';return h}
@@ -189,7 +192,7 @@ function sd(ds){return ds?ds.split("-").reverse().join("-"):""}
 function kpRest(P){var t=0,u=0;(P.kp||[]).forEach(function(x){t+=(+x.h||0)*60});(P.items||[]).forEach(function(i){if(i.t==="gekocht")u+=mins(i)});return t-u}
 function tileH(cls,a,v,l,val,sub){return '<button class="tile '+cls+'" data-a="'+a+'" data-v="'+v+'"><span class="tl">'+l+'</span><span class="tv">'+val+'</span><span class="ts">'+sub+'</span></button>'}
 function viewUren(P){
-viewUrenOld(P);var q=PARTS,c=q.c;
+viewUrenOld(P);var q=PARTS,c=q.c;q.ort=ortSection(P);
 if(sec!=="home"&&q[sec])return '<button class="btn2 back" data-a="sec" data-v="home">\u2190 Terug</button>'+q[sec];
 var f=P.from||"0000-00-00",t=P.to||"9999-12-31",n=(P.items||[]).filter(function(i){return i.d>=f&&i.d<=t}).length,kr=kpRest(P);
 var h='<div class="hello">Hallo'+(P.name?", "+esc(P.name):"")+' \ud83d\udc4b</div><div class="tiles">';
@@ -199,7 +202,8 @@ h+=tileH("","sec","vak","\ud83c\udf34 Vakantie",c?fmt(c.by.vakantie+c.by.dagdeel
 h+=tileH("","sec","kp","\ud83d\udcb3 Gekochte uren",'<span class="'+(kr>=0?"plus":"min")+'">'+fmt(kr)+'</span>',"resterend");
 h+=tileH("","tab","jaar","\ud83d\udcc5 Jaaroverzicht","Kalender","bekijk per dag");
 h+=tileH("","sec","list","\ud83d\udccb Registraties",n,"in deze periode");
-h+=tileH("w2","sec","cfg","\u2699\ufe0f Contract en periode",(+P.ct||0)+" u/week",P.from?sd(P.from)+" t/m "+(P.to?sd(P.to):"\u2026"):"Nog geen periode ingesteld");
+h+=tileH("","sec","ort","🧾 ORT-uitdraai","Per datum","toeslaguren afdrukken");
+h+=tileH("","sec","cfg","\u2699\ufe0f Contract en periode",(+P.ct||0)+" u/week",P.from?sd(P.from)+" t/m "+(P.to?sd(P.to):"\u2026"):"Nog geen periode ingesteld");
 return h+"</div>"}
 var cm=null;
 function dayText(ds){var P=people[cur]||{},its=(P.items||[]).filter(function(i){return i.d===ds});if(!its.length)return "Nog niets ingevuld op deze dag";return "Al ingevuld: "+its.map(function(i){return TYPES[i.t]+" "+fmt(mins(i))+(i.t==="werk"?" ("+i.s+" \u2013 "+i.e+")":"")}).join("; ")}
@@ -233,10 +237,44 @@ var h='<div style="display:flex;justify-content:space-between;align-items:center
 for(var i=0;i<off;i++)h+="<span></span>";
 for(var d=1;d<=dim;d++){var ds=iso(Date.UTC(y,m,d)),wd=(off+d-1)%7,s=st[ds]||{},cl="",pr=[],tot=0;
 if(hm[ds]){cl="c-f";pr.push(hm[ds])}
-cs.forEach(function(c){if(s[c[0]]!=null){if(!cl)cl=c[1];tot+=s[c[0]];pr.push(TYPES[c[0]]+": "+fmt(s[c[0]]))}});
+cs.forEach(function(c){if(s[c[0]]!=null){if(!cl)cl=c[1];tot+=s[c[0]];pr.push(TYPES[c[0]]+": "+fmt(s[c[0]]))}});if(s.werk!=null){var ot2=ortDay(P,ds);if(ot2.eq>.5)pr.push(ortText(ot2))}
 if(!cl&&wd>4)cl="we";
 h+='<span class="'+cl+(ds===sel?" sel":"")+'" data-a="dpick" data-id="'+ds+'" title="'+esc(nl(ds)+(pr.length?" \u2014 "+pr.join(" \u00b7 "):""))+'"><b style="font-weight:600">'+d+'</b><small>'+(tot?String(Math.round(tot/6)/10).replace(".",","):"")+'</small></span>'}
 return h+'</div><div class="sub" style="margin-top:6px">Het getal onder de dag zijn de uren die je al hebt ingevuld.</div>'}
+/*ORT*/
+var ortFrom="",ortTo="";
+function ortRate(wd,m){if(wd===6)return 75;if(wd===0)return 100;if(m>=1320||m<360)return 40;if(m>=1080)return 20;if(m>=360&&m<480)return 20;return 0}
+function ortItem(it){
+var r={20:0,40:0,75:0,100:0};if(it.t!=="werk"||!it.s||!it.e)return r;
+var a=it.s.split(":"),b=it.e.split(":"),sm=+a[0]*60+ +a[1],df=(+b[0]*60+ +b[1])-sm;if(df<0)df+=1440;if(df<=0)return r;
+var f=1,wd0=new Date(utc(it.d)).getUTCDay();
+for(var i=0;i<df;i++){var ab=sm+i,wd=(wd0+Math.floor(ab/1440))%7,k=ortRate(wd,ab%1440);if(k)r[k]+=f}
+return r}
+function ortSum(list){var r={20:0,40:0,75:0,100:0};list.forEach(function(it){var x=ortItem(it);[20,40,75,100].forEach(function(k){r[k]+=x[k]})});r.eq=r[20]+r[40]+r[75]+r[100];return r}
+function ortDay(P,ds){return ortSum((P.items||[]).filter(function(i){return i.d===ds}))}
+function ortText(r){return "ORT: "+[20,40,75,100].filter(function(k){return r[k]>.5}).map(function(k){return k+"% "+fmt(r[k])}).join(", ")}
+function ortRows(r){return '<div class="kv" style="display:block"><div class="sub">ORT</div>'+[20,40,75,100].filter(function(k){return r[k]>.5}).map(function(k){return '<div class="kv"><span>'+k+'%</span><span>'+fmt(r[k])+'</span></div>'}).join("")+'<div class="kv"><span>Totaal in ORT-tijd</span><span><b>'+fmt(r.eq)+'</b></span></div></div>'}
+function dh(m){return (Math.round(m/60*100)/100).toFixed(2).replace(".",",")}
+function ortRange(){var n=new Date(),y=n.getFullYear(),m=n.getMonth();if(!ortFrom)ortFrom=iso(Date.UTC(y,m,1));if(!ortTo)ortTo=iso(Date.UTC(y,m+1,0))}
+function ortData(P){ortRange();
+var its=(P.items||[]).filter(function(i){return i.t==="werk"&&i.d>=ortFrom&&i.d<=ortTo}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:(a.s<b.s?-1:1)});
+var rows=[],T={20:0,40:0,75:0,100:0},eq=0;
+its.forEach(function(it){var x=ortItem(it),q=x[20]+x[40]+x[75]+x[100];if(q<.5)return;var e=x[20]+x[40]+x[75]+x[100];[20,40,75,100].forEach(function(k){T[k]+=x[k]});eq+=e;rows.push({it:it,x:x,e:e})});
+return {rows:rows,T:T,eq:eq}}
+function ortSection(P){
+var D=ortData(P),h='<div class="card noprint"><h2>ORT-uitdraai</h2><div class="grid"><div><label>Van</label><input type="date" data-f="of" value="'+ortFrom+'"></div><div><label>Tot en met</label><input type="date" data-f="ot" value="'+ortTo+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn2" data-a="ortm" data-v="0">Deze maand</button><button class="btn2" data-a="ortm" data-v="-1">Vorige maand</button></div></div>';
+h+='<div class="card" id="ortrep"><h2>ORT-uren'+(P.name?' '+esc(P.name):'')+'</h2><div class="sub">'+sd(ortFrom)+' t/m '+sd(ortTo)+'. Aantallen in uren.</div><div style="overflow-x:auto"><table class="ort"><thead><tr><th>Datum</th><th>Dienst</th><th class="r">20%</th><th class="r">40%</th><th class="r">75%</th><th class="r">100%</th><th class="r">Totaal</th></tr></thead><tbody>';
+if(!D.rows.length)h+='<tr><td colspan="7" class="sub">Geen ORT-uren in deze periode.</td></tr>';
+D.rows.forEach(function(r){h+='<tr><td>'+nl(r.it.d)+'</td><td>'+r.it.s+'\u2013'+r.it.e+'</td>'+[20,40,75,100].map(function(k){return '<td class="r">'+(r.x[k]>.5?dh(r.x[k]):'')+'</td>'}).join("")+'<td class="r"><b>'+dh(r.e)+'</b></td></tr>'});
+h+='</tbody><tfoot><tr><td colspan="2">Totaal</td>'+[20,40,75,100].map(function(k){return '<td class="r">'+dh(D.T[k])+'</td>'}).join("")+'<td class="r">'+dh(D.eq)+'</td></tr></tfoot></table></div>';
+h+='<div class="sub" style="margin-top:8px">Weekdagen: 06:00\u201308:00 en 18:00\u201322:00 20%, 22:00\u201306:00 40%. Zaterdag 75%, zondag 100%. Elk uur telt volgens de dag en tijd waarop het valt. Pauze wordt niet in mindering gebracht op de ORT-uren.</div>';
+h+='<div class="noprint" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" style="margin:0;width:auto;padding:10px 16px" data-a="ortprint">Afdrukken of opslaan als PDF</button><button class="btn2" data-a="ortcsv">Download CSV</button></div></div>';
+return h}
+function ortCsv(P){var D=ortData(P),L=["Datum;Dag;Van;Tot;20%;40%;75%;100%;Totaal"];
+D.rows.forEach(function(r){var d=r.it.d;L.push([d.split("-").reverse().join("-"),nl(d).split(" ")[0],r.it.s,r.it.e].concat([20,40,75,100].map(function(k){return dh(r.x[k])}),[dh(r.e)]).join(";"))});
+L.push(["Totaal","","",""].concat([20,40,75,100].map(function(k){return dh(D.T[k])}),[dh(D.eq)]).join(";"));
+var blob=new Blob(["\ufeff"+L.join("\r\n")],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="ort-"+ortFrom+"-"+ortTo+".csv";document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u)},500)}
+/*ENDORT*/
 function viewJaar(P){
 var hm=hmap(),st={};
 (P.items||[]).forEach(function(it){var s=st[it.d]||(st[it.d]={});s[it.t]=(s[it.t]||0)+mins(it)});
@@ -249,7 +287,7 @@ h+='<div><div class="mn">'+f.toLocaleDateString("nl-NL",{month:"long",timeZone:"
 for(var i=0;i<off;i++)h+="<span></span>";
 for(var d=1;d<=dim;d++){var ds=iso(Date.UTC(yr,m,d)),wd=(off+d-1)%7,cl="",s=st[ds]||{},tt="";
 if(hm[ds]){cl="c-f";tt=hm[ds]}else if(s.vakantie||s.dagdeel){cl="c-v";tt="Vakantie"}else if(s.onbetaald){cl="c-u";tt="Onbetaald verlof"}else if(s.gekocht){cl="c-g";tt="Verlof gekochte uren"}else if(s.ziek){cl="c-z";tt="Ziekte"}else if(s.overig){cl="c-o";tt="Overig"}else if(s.werk){cl="c-w";tt="Gewerkt"}
-if(!cl&&wd>4)cl="we";var pr=[];if(hm[ds])pr.push(hm[ds]);["werk","vakantie","dagdeel","onbetaald","gekocht","ziek","overig"].forEach(function(k){if(s[k]!=null)pr.push(TYPES[k]+": "+fmt(s[k]))});tt=nl(ds)+(pr.length?" — "+pr.join(" · "):"");if((P.from&&ds<P.from)||(P.to&&ds>P.to))cl+=" out";
+if(!cl&&wd>4)cl="we";var pr=[];if(hm[ds])pr.push(hm[ds]);["werk","vakantie","dagdeel","onbetaald","gekocht","ziek","overig"].forEach(function(k){if(s[k]!=null)pr.push(TYPES[k]+": "+fmt(s[k]))});if(s.werk!=null){var ot=ortDay(P,ds);if(ot.eq>.5)pr.push(ortText(ot))}tt=nl(ds)+(pr.length?" — "+pr.join(" · "):"");if((P.from&&ds<P.from)||(P.to&&ds>P.to))cl+=" out";
 h+='<span class="'+cl+'" data-a="day" data-id="'+ds+'" title="'+esc(tt)+'">'+d+'</span>'}
 h+="</div></div>"}
 h+='</div></div><div class="card"><h2>Feestdagen '+yr+'</h2>';
@@ -295,7 +333,10 @@ $("olab").textContent=w?"Opmerkingen":"Reden";$("o").placeholder=w?"Optioneel, b
 document.addEventListener("click",function(ev){
 var b=ev.target.closest&&ev.target.closest("[data-a]");if(!b)return;
 var a=b.getAttribute("data-a"),v=b.getAttribute("data-v"),id=b.getAttribute("data-id"),P;
-if(a==="login"){sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value}).then(function(r){if(r.error)authUI("Inloggen mislukt: "+r.error.message,"in");else start(r.data.session)})}
+if(a==="ortprint"){window.print()}
+else if(a==="ortcsv"){ortCsv(people[cur])}
+else if(a==="ortm"){var n0=new Date(),m0=n0.getMonth()+ +v;ortFrom=iso(Date.UTC(n0.getFullYear(),m0,1));ortTo=iso(Date.UTC(n0.getFullYear(),m0+1,0));render()}
+else if(a==="login"){sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value}).then(function(r){if(r.error)authUI("Inloggen mislukt: "+r.error.message,"in");else start(r.data.session)})}
 else if(a==="signup"){sb.auth.signUp({email:$("em").value.trim(),password:$("pw").value,options:{emailRedirectTo:REDIR}}).then(function(r){if(r.error)authUI("Account maken mislukt: "+r.error.message,"in");else if(r.data.session)start(r.data.session);else authUI("Gelukt. Open de link in de e-mail die je hebt ontvangen om je account te bevestigen en log daarna in.","in")})}
 else if(a==="forgot"){var e1=$("em").value.trim();if(!e1){alert("Vul eerst je e-mailadres in.");return}sb.auth.resetPasswordForEmail(e1,{redirectTo:REDIR}).then(function(r){authUI(r.error?"Mislukt: "+r.error.message:"Als dit adres bekend is, ontvang je een e-mail met een link om een nieuw wachtwoord te kiezen.","in")})}
 else if(a==="magic"){var e2=$("em").value.trim();if(!e2){alert("Vul eerst je e-mailadres in.");return}sb.auth.signInWithOtp({email:e2,options:{emailRedirectTo:REDIR,shouldCreateUser:false}}).then(function(r){authUI(r.error?"Mislukt: "+r.error.message:"Als dit adres bekend is, ontvang je een e-mail met een inloglink.","in")})}
@@ -357,6 +398,7 @@ document.addEventListener("change",function(ev){
 var e=ev.target;if(e.id==="t"){typeUI();return}
 var f=e.getAttribute&&e.getAttribute("data-f");if(!f)return;
 if(f==="pd"){peil=e.value||today();render();return}
+if(f==="of"||f==="ot"){if(f==="of")ortFrom=e.value;else ortTo=e.value;render();return}
 if(!people[cur])return;if(f==="tl"){var Q=clone();Q.tl=e.checked;persist(Q);return}if(f==="wd"){var Q2=clone();Q2.wd=[].slice.call(document.querySelectorAll('[data-f="wd"]:checked')).map(function(x){return +x.getAttribute("data-v")});persist(Q2);return}
 var P=clone(),m={nm:"name",ct:"ct",bs:"bs",fr:"from",to:"to"};
 P[m[f]]=(f==="ct"||f==="bs")?(+e.value||0):e.value;persist(P)});
