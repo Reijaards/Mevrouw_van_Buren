@@ -56,6 +56,8 @@ body *{visibility:hidden}#ortrep,#ortrep *{visibility:visible}#ortrep{position:a
 .tile.w2{grid-column:1/-1}.tile.sd .tv{font-size:38px}
 .tile.ac{background:var(--ac);border-color:var(--ac);color:#fff;min-height:84px}.tile.ac .tl,.tile.ac .ts{color:rgba(255,255,255,.85)}
 .tile:focus-visible{outline:2px solid var(--ac);outline-offset:2px}.back{margin-bottom:12px}
+.tilein{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:10px;width:100%}.tilein:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.tlchk{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;color:var(--tx);cursor:pointer}.tlchk input{width:auto;margin:0}
 .cal.bg{font-size:14px;gap:3px}.cal.bg span{padding:8px 0}
 .dpop{position:absolute;z-index:40;left:0;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px}
 .dpop .cal{gap:3px}.dpop .cal span{padding:5px 0;line-height:1.15;display:flex;flex-direction:column;align-items:center;cursor:pointer;font-size:14px}
@@ -199,7 +201,7 @@ var f=P.from||"0000-00-00",t=P.to||"9999-12-31",n=(P.items||[]).filter(function(
 var vr=vsYear(P,new Date().getFullYear()),vsTile=vr?dh(vr.rest.wet+vr.rest.bov+vr.rest.extra-vr.tekort)+" u":"–",vsSub=vr?"resterend in "+new Date().getFullYear():"nog niet ingesteld";
 var h='<div class="hello">Hallo'+(P.name?", "+esc(P.name):"")+' \ud83d\udc4b</div><div class="tiles">';
 h+=tileH("ac w2","sec","add","Nieuw","\u2795 Uren toevoegen","Dienst, vakantie, verlof of ziekte");
-h+=tileH("w2 sd","sec","saldo","\u2696\ufe0f Saldo",c?'<span class="'+(c.saldo>=0?"plus":"min")+'">'+fmt(c.saldo,true)+'</span>':"\u2013",c?"tot en met "+sd(q.pd):"Stel een periode in");
+h+=saldoTileWrap(P,tileH("w2 sd","sec","saldo","\u2696\ufe0f Saldo",c?'<span class="'+(c.saldo>=0?"plus":"min")+'">'+fmt(c.saldo,true)+'</span>':"\u2013",c?"tot en met "+sd(q.pd):(P.tl&&!q.pd?"Nog geen uren ingevuld":"Stel een periode in")));
 h+=tileH("","sec","vak","\ud83c\udf34 Vakantie",c?fmt(c.by.vakantie+c.by.dagdeel):"\u2013",c?"onbetaald "+fmt(c.by.onbetaald):"Stel een periode in");
 h+=tileH("","sec","vs","🌴 Vakantiesaldo",vsTile,vsSub);
 h+=tileH("","sec","kp","\ud83d\udcb3 Gekochte uren",'<span class="'+(kr>=0?"plus":"min")+'">'+fmt(kr)+'</span>',"resterend");
@@ -329,6 +331,9 @@ if(es.length){h+='<h2 style="margin-top:14px">Aangevuld en gecorrigeerd in '+y+'
 es.forEach(function(e){h+='<div class="row"><div><div>'+VSCN[e.c]+(e.k==="correctie"?" (correctie)":" (opgevoerd)")+'</div><div class="sub">'+nl(e.d)+(e.o?' \u00b7 '+esc(e.o):"")+'</div></div><div class="tot">'+(e.h>0?"+":"")+dh(e.h*60)+' u<button class="del" data-a="delvs" data-id="'+e.id+'" aria-label="Verwijderen">\u00d7</button></div></div>'})}
 return h+'</div>'}
 /*ENDVS*/
+function saldoTileWrap(P,t){
+var inner=t.slice(t.indexOf(">")+1,t.lastIndexOf("</button>"));
+return '<div class="tile w2 sd"><button class="tilein" data-a="sec" data-v="saldo">'+inner+'</button><label class="tlchk"><input type="checkbox" data-f="tl"'+(P.tl?" checked":"")+'> Tot laatst ingevulde datum</label></div>'}
 function viewJaar(P){
 var hm=hmap(),st={};
 (P.items||[]).forEach(function(it){var s=st[it.d]||(st[it.d]={});s[it.t]=(s[it.t]||0)+mins(it)});
