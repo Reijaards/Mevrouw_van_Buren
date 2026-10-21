@@ -334,6 +334,16 @@ return h+'</div>'}
 function saldoTileWrap(P,t){
 var inner=t.slice(t.indexOf(">")+1,t.lastIndexOf("</button>"));
 return '<div class="tile w2 sd"><button class="tilein" data-a="sec" data-v="saldo">'+inner+'</button><label class="tlchk"><input type="checkbox" data-f="tl"'+(P.tl?" checked":"")+'> Tot laatst ingevulde datum</label></div>'}
+/*PAUZE*/
+function autoPauze(){var t=$("t"),p=$("p"),s=$("s");if(!t||!p||!s)return;
+if(t.value!=="werk"){p.value=0;delete p.dataset.man;return}
+if(p.dataset.man)return;
+var h=+(s.value||"00:00").split(":")[0];p.value=h>=13?0:30}
+["input","change"].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(!t||!t.id)return;
+if(t.id==="p")t.dataset.man="1";
+else if(t.id==="s")autoPauze();
+else if(t.id==="es"){var h=+(t.value||"0:0").split(":")[0];if(t.value&&h>=13&&$("ep"))$("ep").value=0}})});
+/*ENDPAUZE*/
 function viewJaar(P){
 var hm=hmap(),st={};
 (P.items||[]).forEach(function(it){var s=st[it.d]||(st[it.d]={});s[it.t]=(s[it.t]||0)+mins(it)});
@@ -387,7 +397,7 @@ function typeUI(){var t=$("t");if(!t)return;var w=t.value==="werk";
 document.querySelectorAll(".w").forEach(function(x){x.classList.toggle("hide",!w)});
 document.querySelectorAll(".l").forEach(function(x){x.classList.toggle("hide",w)});
 var dd=t.value==="dagdeel";if(dd){document.querySelectorAll(".w").forEach(function(x){x.classList.remove("hide")});document.querySelectorAll(".l").forEach(function(x){x.classList.add("hide")});$("p").parentNode.classList.add("hide")}else $("p").parentNode.classList.remove("hide");
-$("olab").textContent=w?"Opmerkingen":"Reden";$("o").placeholder=w?"Optioneel, bijv. dienst of bijzonderheden":"Bijv. zomervakantie, tandarts, bijzonder verlof"}
+$("olab").textContent=w?"Opmerkingen":"Reden";$("o").placeholder=w?"Optioneel, bijv. dienst of bijzonderheden":"Bijv. zomervakantie, tandarts, bijzonder verlof";autoPauze()}
 
 document.addEventListener("click",function(ev){
 var b=ev.target.closest&&ev.target.closest("[data-a]");if(!b)return;
