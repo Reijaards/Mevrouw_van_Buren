@@ -46,7 +46,7 @@ button{font:inherit;cursor:pointer}
 .ovs{cursor:pointer;padding:10px 14px;border:1px solid var(--bd);border-radius:12px;background:var(--card);font-size:14px;color:var(--mu);margin-bottom:12px}.ovs b{font-size:15px}details#ov[open]>.ovs{margin-bottom:16px}
 .dn{font-size:13px;color:var(--ac);margin-top:3px;min-height:18px}
 .cal span[data-a]{cursor:pointer}.ent{padding:8px 0;border-top:1px solid var(--bd)}
-.ort{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}.ort th,.ort td{padding:6px 4px;border-bottom:1px solid var(--bd);text-align:left}.ort .r{text-align:right}.ort tfoot td{font-weight:700}
+.ort{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}.ort th,.ort td{padding:6px 4px;border-bottom:1px solid var(--bd);text-align:left}.ort .r{text-align:right}.ort tfoot td{font-weight:700}.ort td[rowspan]{vertical-align:top}.ort tr.first td{border-top:2px solid var(--bd)}.ort tr.z td:not([rowspan]){color:var(--mu)}
 @media print{:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--bg:#fff;--card:#fff;--tx:#000;--mu:#444;--bd:#bbb;color-scheme:light}
 body *{visibility:hidden}#ortrep,#ortrep *{visibility:visible}#ortrep{position:absolute;left:0;top:0;width:100%;border:0}.noprint{display:none!important}}
 .hello{font-size:19px;font-weight:600;margin:0 0 14px}
@@ -266,18 +266,33 @@ var its=(P.items||[]).filter(function(i){return i.t==="werk"&&i.d>=ortFrom&&i.d<
 var rows=[],T={20:0,40:0,75:0,100:0},eq=0;
 its.forEach(function(it){var x=ortItem(it),q=x[20]+x[40]+x[75]+x[100];if(q<.5)return;var e=x[20]+x[40]+x[75]+x[100];[20,40,75,100].forEach(function(k){T[k]+=x[k]});eq+=e;rows.push({it:it,x:x,e:e})});
 return {rows:rows,T:T,eq:eq}}
+function ortSegs(it){
+if(it.t!=="werk"||!it.s||!it.e)return [];
+var x=it.s.split(":"),y=it.e.split(":"),sm=+x[0]*60+ +x[1],df=(+y[0]*60+ +y[1])-sm;if(df<0)df+=1440;if(df<=0)return [];
+var wd0=new Date(utc(it.d)).getUTCDay(),segs=[],cur=null;
+for(var i=0;i<df;i++){var ab=sm+i,wd=(wd0+Math.floor(ab/1440))%7,k=ortRate(wd,ab%1440);
+if(!cur||cur.pct!==k){cur={pct:k,from:ab,to:ab+1};segs.push(cur)}else cur.to=ab+1}
+return segs.map(function(g){return {pct:g.pct,from:g.from,to:g.to,min:g.to-g.from}})}
+function ortHm(ab,end){var m=ab%1440;if(end&&m===0)return "24:00";return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")}
+function ortBlk(g,nextDayLabel){return ortHm(g.from)+"\u2013"+ortHm(g.to,true)+(g.from>=1440?" (volgende dag)":(g.to>1440?" (eindigt volgende dag)":""))}
 function ortSection(P){
 var D=ortData(P),h='<div class="card noprint"><h2>ORT-uitdraai</h2><div class="grid"><div><label>Van</label><input type="date" data-f="of" value="'+ortFrom+'"></div><div><label>Tot en met</label><input type="date" data-f="ot" value="'+ortTo+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn2" data-a="ortm" data-v="0">Deze maand</button><button class="btn2" data-a="ortm" data-v="-1">Vorige maand</button></div></div>';
-h+='<div class="card" id="ortrep"><h2>ORT-uren'+(P.name?' '+esc(P.name):'')+'</h2><div class="sub">'+sd(ortFrom)+' t/m '+sd(ortTo)+'. Aantallen in uren.</div><div style="overflow-x:auto"><table class="ort"><thead><tr><th>Datum</th><th>Dienst</th><th class="r">20%</th><th class="r">40%</th><th class="r">75%</th><th class="r">100%</th><th class="r">Totaal</th></tr></thead><tbody>';
-if(!D.rows.length)h+='<tr><td colspan="7" class="sub">Geen ORT-uren in deze periode.</td></tr>';
-D.rows.forEach(function(r){h+='<tr><td>'+nl(r.it.d)+'</td><td>'+r.it.s+'\u2013'+r.it.e+'</td>'+[20,40,75,100].map(function(k){return '<td class="r">'+(r.x[k]>.5?dh(r.x[k]):'')+'</td>'}).join("")+'<td class="r"><b>'+dh(r.e)+'</b></td></tr>'});
-h+='</tbody><tfoot><tr><td colspan="2">Totaal</td>'+[20,40,75,100].map(function(k){return '<td class="r">'+dh(D.T[k])+'</td>'}).join("")+'<td class="r">'+dh(D.eq)+'</td></tr></tfoot></table></div>';
-h+='<div class="sub" style="margin-top:8px">Weekdagen: 06:00\u201308:00 en 18:00\u201322:00 20%, 22:00\u201306:00 40%. Zaterdag 75%, zondag 100%. Elk uur telt volgens de dag en tijd waarop het valt. Pauze wordt niet in mindering gebracht op de ORT-uren.</div>';
+h+='<div class="card" id="ortrep"><h2>ORT-uren'+(P.name?' '+esc(P.name):'')+'</h2><div class="sub">'+sd(ortFrom)+' t/m '+sd(ortTo)+'. Per gewerkte dienst staat hieronder uit welke tijdsblokken die bestaat en welk percentage in elk blok geldt. Aantallen in uren.</div><div style="overflow-x:auto"><table class="ort"><thead><tr><th>Datum</th><th>Dienst</th><th>Tijdsblok</th><th class="r">ORT</th><th class="r">Uren</th></tr></thead><tbody>';
+if(!D.rows.length)h+='<tr><td colspan="5" class="sub">Geen ORT-uren in deze periode.</td></tr>';
+D.rows.forEach(function(r){var sg=ortSegs(r.it),n=sg.length;
+sg.forEach(function(g,i){h+='<tr class="'+(i===0?'first ':'')+(g.pct?'':'z')+'">'+(i===0?'<td rowspan="'+n+'">'+nl(r.it.d)+'</td><td rowspan="'+n+'">'+r.it.s+'\u2013'+r.it.e+(+r.it.p?'<div class="sub">pauze '+(+r.it.p)+' min, niet verrekend</div>':'')+'</td>':'')+'<td>'+ortBlk(g)+'</td><td class="r">'+(g.pct?g.pct+'%':'geen')+'</td><td class="r">'+dh(g.min)+'</td></tr>'})});
+h+='</tbody></table></div>';
+var tt=0;h+='<h3 style="font-size:14px;margin:16px 0 4px">Totaal per percentage</h3><table class="ort"><tbody>';
+[20,40,75,100].forEach(function(k){if(D.T[k]>.5){tt+=D.T[k];h+='<tr><td>'+k+'%</td><td class="r">'+dh(D.T[k])+'</td></tr>'}});
+h+='</tbody><tfoot><tr><td>Totaal uren met ORT</td><td class="r">'+dh(tt)+'</td></tr></tfoot></table>';
+h+='<div class="sub" style="margin-top:8px">Regels: maandag t/m vrijdag 06:00\u201308:00 en 18:00\u201322:00 is 20%, 22:00\u201306:00 is 40%. Zaterdag is 75% en zondag 100%. Elk uur telt volgens de dag en tijd waarop het valt. Pauze wordt niet in mindering gebracht op de ORT-uren.</div>';
 h+='<div class="noprint" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" style="margin:0;width:auto;padding:10px 16px" data-a="ortprint">Afdrukken of opslaan als PDF</button><button class="btn2" data-a="ortcsv">Download CSV</button></div></div>';
 return h}
-function ortCsv(P){var D=ortData(P),L=["Datum;Dag;Van;Tot;20%;40%;75%;100%;Totaal"];
-D.rows.forEach(function(r){var d=r.it.d;L.push([d.split("-").reverse().join("-"),nl(d).split(" ")[0],r.it.s,r.it.e].concat([20,40,75,100].map(function(k){return dh(r.x[k])}),[dh(r.e)]).join(";"))});
-L.push(["Totaal","","",""].concat([20,40,75,100].map(function(k){return dh(D.T[k])}),[dh(D.eq)]).join(";"));
+function ortCsv(P){var D=ortData(P),L=["Datum;Dag;Dienst van;Dienst tot;Blok van;Blok tot;ORT percentage;Uren"];
+D.rows.forEach(function(r){var d=r.it.d,dd=d.split("-").reverse().join("-"),dag=nl(d).split(" ")[0];
+ortSegs(r.it).forEach(function(g){L.push([dd,dag,r.it.s,r.it.e,ortHm(g.from),ortHm(g.to,true),g.pct+"%",dh(g.min)].join(";"))})});
+L.push("");L.push("Totaal per percentage;;;;;;;");
+[20,40,75,100].forEach(function(k){if(D.T[k]>.5)L.push(["Totaal","","","","","",k+"%",dh(D.T[k])].join(";"))});
 var blob=new Blob(["\ufeff"+L.join("\r\n")],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="ort-"+ortFrom+"-"+ortTo+".csv";document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u)},500)}
 /*ENDORT*/
 /*OVL*/
