@@ -414,7 +414,7 @@ hol.slice().sort(function(a,b){return a.d<b.d?-1:1}).forEach(function(x){h+='<di
 h+="</div></div>";
 var ad='<div class="card"><h2>Beheerders</h2>';
 Object.keys(people).forEach(function(id){var isA=!!adminSet[id];ad+='<div class="row"><div><div>'+esc(people[id].name||"(zonder naam)")+(isA?'<span class="badge">Beheerder</span>':"")+'</div><div class="sub">'+esc(emails[id]||"")+'</div></div>'+(id===uid?"":'<button class="btn2" data-a="'+(isA?"rmadm":"mkadm")+'" data-id="'+id+'">'+(isA?"Beheerder verwijderen":"Beheerder maken")+'</button>')+'</div>'});
-return h+ad+'</div>'}
+return h+ad+'</div>'+accessCard()}
 
 function render(){
 if(!loaded)return;
@@ -451,6 +451,10 @@ else if(a==="delvs"){var ve0=((people[cur]||{}).vs||[]).filter(function(x){retur
 else if(a==="ortprint"){window.print()}
 else if(a==="ortcsv"){ortCsv(people[cur])}
 else if(a==="ortm"){var n0=new Date(),m0=n0.getMonth()+ +v;ortFrom=iso(Date.UTC(n0.getFullYear(),m0,1));ortTo=iso(Date.UTC(n0.getFullYear(),m0+1,0));render()}
+else if(a==="adddom"){var dm=$("nd").value.trim().toLowerCase().replace(/^@/,"");if(!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(dm)){alert("Vul een geldig domein in, bijvoorbeeld delft.nl.");return}sb.from("allowed_domains").upsert({domain:dm}).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{if(aDom.indexOf(dm)<0)aDom.push(dm);render()}})}
+else if(a==="rmdom"){sb.from("allowed_domains").delete().eq("domain",id).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{aDom=aDom.filter(function(x){return x!==id});render()}})}
+else if(a==="addem"){var em=$("ne").value.trim().toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){alert("Vul een geldig e-mailadres in.");return}sb.from("allowed_emails").upsert({email:em}).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{if(aEm.indexOf(em)<0)aEm.push(em);render()}})}
+else if(a==="rmem"){sb.from("allowed_emails").delete().eq("email",id).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{aEm=aEm.filter(function(x){return x!==id});render()}})}
 else if(a==="login"){sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value}).then(function(r){if(r.error)authUI("Inloggen mislukt: "+r.error.message,"in");else start(r.data.session)})}
 else if(a==="signup"){sb.auth.signUp({email:$("em").value.trim(),password:$("pw").value,options:{emailRedirectTo:REDIR}}).then(function(r){if(r.error)authUI("Account maken mislukt: "+r.error.message,"in");else if(r.data.session)start(r.data.session);else authUI("Gelukt. Open de link in de e-mail die je hebt ontvangen om je account te bevestigen en log daarna in.","in")})}
 else if(a==="forgot"){var e1=$("em").value.trim();if(!e1){alert("Vul eerst je e-mailadres in.");return}sb.auth.resetPasswordForEmail(e1,{redirectTo:REDIR}).then(function(r){authUI(r.error?"Mislukt: "+r.error.message:"Als dit adres bekend is, ontvang je een e-mail met een link om een nieuw wachtwoord te kiezen.","in")})}
@@ -547,18 +551,28 @@ if(msg)h+='<div class="sub" style="margin-bottom:10px;color:var(--tx)">'+esc(msg
 if(mode==="reset")h+='<label>Nieuw wachtwoord</label><input id="pw" type="password" autocomplete="new-password"><button class="btn" data-a="setpw">Wachtwoord opslaan</button></div>';
 else h+='<label>E-mailadres</label><input id="em" type="email" autocomplete="email"><div style="height:10px"></div><label>Wachtwoord</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" data-a="login">Inloggen</button><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn2" data-a="signup">Account maken</button><button class="btn2" data-a="forgot">Wachtwoord vergeten?</button><button class="btn2" data-a="magic">Stuur inloglink</button></div></div>';
 $("app").innerHTML=h}
+var aDom=[],aEm=[];
+function noAccess(){$("app").innerHTML='<div class="card" style="max-width:480px;margin:24px auto"><h2>Nog geen toegang</h2><p>Je account ('+esc(myEmail)+') is nog niet geactiveerd voor deze tool. Vraag de beheerder om je toegang te geven.</p><button class="btn2" data-a="logout">Uitloggen</button></div>'}
+function accessCard(){
+var h='<div class="card"><h2>Toegang tot de tool</h2><div class="sub" style="margin-bottom:10px">Wie een account aanmaakt, krijgt alleen toegang als het e-mailadres hieronder staat of bij een toegestaan domein hoort. Beheerders hebben altijd toegang.</div><label>Toegestane domeinen</label>';
+(aDom||[]).slice().sort().forEach(function(d){h+='<div class="row"><div>@'+esc(d)+'</div><button class="del" data-a="rmdom" data-id="'+esc(d)+'" aria-label="Verwijderen">\u00d7</button></div>'});
+h+='<input id="nd" placeholder="bijv. delft.nl" style="margin-top:8px"><button class="btn2" style="margin:8px 0 16px" data-a="adddom">Domein toevoegen</button><label>Toegestane e-mailadressen ('+(aEm||[]).length+')</label>';
+(aEm||[]).slice().sort().forEach(function(m){h+='<div class="row"><div style="overflow-wrap:anywhere">'+esc(m)+'</div><button class="del" data-a="rmem" data-id="'+esc(m)+'" aria-label="Verwijderen">\u00d7</button></div>'});
+h+='<input id="ne" type="email" placeholder="naam@bedrijf.nl" style="margin-top:8px"><button class="btn2" style="margin-top:8px" data-a="addem">E-mailadres toevoegen</button></div>';
+return h}
 function fail(e){$("app").innerHTML='<div class="card">Gegevens laden mislukt: '+esc(e&&e.message||e)+'</div>'}
 function start(sess){
 if(!sess){authUI("","in");return}
 uid=sess.user.id;myEmail=sess.user.email||"";cur=uid;
+sb.rpc("is_allowed").then(function(g){if(!g.error&&g.data!==true){noAccess();return}
 sb.from("admins").select("user_id").then(function(r){
 if(r.error){fail(r.error);return}
 adminSet={};(r.data||[]).forEach(function(x){adminSet[x.user_id]=1});admin=!!adminSet[uid];if(admin)tab="admin";
-Promise.all([sb.from("settings").select("data").eq("key","holidays").maybeSingle(),sb.from("profiles").select("id,email,data")]).then(function(rs){
-var a=rs[0],b=rs[1];if(a.error||b.error){fail(a.error||b.error);return}
+Promise.all([sb.from("settings").select("data").eq("key","holidays").maybeSingle(),sb.from("profiles").select("id,email,data"),sb.from("allowed_domains").select("domain"),sb.from("allowed_emails").select("email")]).then(function(rs){
+var a=rs[0],b=rs[1];aDom=(rs[2].data||[]).map(function(x){return x.domain});aEm=(rs[3].data||[]).map(function(x){return x.email});if(a.error||b.error){fail(a.error||b.error);return}
 hol=cleanHol(a.data&&a.data.data&&a.data.data.days);people={};emails={};
 (b.data||[]).forEach(function(x){people[x.id]=cleanProfile(x.data);emails[x.id]=x.email||""});
-loaded=true;render()})})}
+loaded=true;render()})})})}
 (function(){
 if(!window.supabase){$("app").innerHTML='<div class="card">De verbinding met de server kon niet worden geladen. Controleer je internetverbinding en vernieuw de pagina.</div>';return}
 sb=supabase.createClient(SB_URL,SB_KEY);
