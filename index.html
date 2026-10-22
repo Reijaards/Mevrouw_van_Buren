@@ -48,7 +48,7 @@ button{font:inherit;cursor:pointer}
 .cal span[data-a]{cursor:pointer}.ent{padding:8px 0;border-top:1px solid var(--bd)}
 .ort{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}.ort th,.ort td{padding:6px 4px;border-bottom:1px solid var(--bd);text-align:left}.ort .r{text-align:right}.ort tfoot td{font-weight:700}.ort td[rowspan]{vertical-align:top}.ort tr.first td{border-top:2px solid var(--bd)}.ort tr.z td:not([rowspan]){color:var(--mu)}
 @media print{:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--bg:#fff;--card:#fff;--tx:#000;--mu:#444;--bd:#bbb;color-scheme:light}
-body *{visibility:hidden}#ortrep,#ortrep *{visibility:visible}#ortrep{position:absolute;left:0;top:0;width:100%;border:0}.noprint{display:none!important}}
+body *{visibility:hidden}#ortrep,#ortrep *,#vxrep,#vxrep *{visibility:visible}#ortrep,#vxrep{position:absolute;left:0;top:0;width:100%;border:0}.noprint{display:none!important}}
 .hello{font-size:19px;font-weight:600;margin:0 0 14px}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
 .tile{display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-height:96px;padding:14px;text-align:left;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:18px}
@@ -126,7 +126,7 @@ function dd(m){return " (≈ "+String(Math.round(m/dg*10)/10).replace(".",",")+"
 var h='<div class="card"><h2>🌴 Vakantie-uren in periode</h2>';
 [["vakantie","Betaald verlof"],["onbetaald","Onbetaald verlof"]].forEach(function(x){var a=r[x[0]],tot=a[0]+a[1];
 h+='<div class="kv"><span>'+x[1]+'</span><span><b>'+fmt(tot)+'</b>'+dd(tot)+'</span></div><div class="sub" style="padding:0 0 6px">al opgenomen '+fmt(a[0])+' · gepland '+fmt(a[1])+'</div>'});
-return h+'</div>'}
+return h+'<button class="btn2" style="margin-top:8px" data-a="vxopen" data-v="vak">Export opgenomen datums</button></div>'}
 function viewUrenOld(P){
 var h=cfgCard(P,false),pd=peil;
 pd=P.tl?effPd(P,pd):pd;
@@ -189,13 +189,13 @@ var kp=(P.kp||[]).slice().sort(function(a,b){return a.d<b.d?1:-1}),tot=kp.reduce
 (P.items||[]).forEach(function(i){if(i.t==="gekocht")used+=mins(i)});
 var rest=tot-used,h='<div class="card"><h2>💳 Gekochte vakantie-uren</h2><div class="kv"><span>Gekocht</span><span>'+fmt(tot)+'</span></div><div class="kv"><span>Opgenomen</span><span>'+fmt(used)+'</span></div><div class="kv"><span><b>Resterend</b></span><span class="'+(rest>=0?"plus":"min")+'"><b>'+fmt(rest)+'</b></span></div>';
 kp.forEach(function(x){h+='<div class="row"><div><div>'+nl(x.d)+'</div><div class="sub">'+(+x.h)+' uur'+(x.o?' · '+esc(x.o):"")+'</div></div><button class="del" data-a="delkp" data-id="'+x.id+'" aria-label="Verwijderen">×</button></div>'});
-return h+'<div class="grid" style="margin-top:12px"><div><label>Datum aankoop</label><input type="date" id="kd" value="'+today()+'"><div class="dn">'+dn(today())+'</div></div><div><label>Aantal uren</label><input type="number" id="kh" min="0" step="0.25"></div><div class="full"><label>Opmerking</label><input id="ko" placeholder="Optioneel"></div></div><button class="btn" data-a="addkp">Gekochte uren toevoegen</button></div>'}
+return h+'<div class="grid" style="margin-top:12px"><div><label>Datum aankoop</label><input type="date" id="kd" value="'+today()+'"><div class="dn">'+dn(today())+'</div></div><div><label>Aantal uren</label><input type="number" id="kh" min="0" step="0.25"></div><div class="full"><label>Opmerking</label><input id="ko" placeholder="Optioneel"></div></div><button class="btn" data-a="addkp">Gekochte uren toevoegen</button><button class="btn2" style="margin-top:8px" data-a="vxopen" data-v="gek">Export opgenomen datums</button></div>'}
 var PARTS={};
 function sd(ds){return ds?ds.split("-").reverse().join("-"):""}
 function kpRest(P){var t=0,u=0;(P.kp||[]).forEach(function(x){t+=(+x.h||0)*60});(P.items||[]).forEach(function(i){if(i.t==="gekocht")u+=mins(i)});return t-u}
 function tileH(cls,a,v,l,val,sub){return '<button class="tile '+cls+'" data-a="'+a+'" data-v="'+v+'"><span class="tl">'+l+'</span><span class="tv">'+val+'</span><span class="ts">'+sub+'</span></button>'}
 function viewUren(P){
-viewUrenOld(P);var q=PARTS,c=q.c;q.ort=ortSection(P);q.vs=vsSection(P);
+viewUrenOld(P);var q=PARTS,c=q.c;q.ort=ortSection(P);q.vs=vsSection(P);q.vx=vxSection(P);
 if(sec!=="home"&&q[sec])return '<button class="btn2 back" data-a="sec" data-v="home">\u2190 Terug</button>'+q[sec];
 var f=P.from||"0000-00-00",t=P.to||"9999-12-31",n=(P.items||[]).filter(function(i){return i.d>=f&&i.d<=t}).length,kr=kpRest(P);
 var vr=vsYear(P,new Date().getFullYear()),vsTile=vr?dh(vr.rest.wet+vr.rest.bov+vr.rest.extra-vr.tekort)+" u":"–",vsSub=vr?"resterend in "+new Date().getFullYear():"nog niet ingesteld";
@@ -248,12 +248,12 @@ h+='<span class="'+cl+(ds===sel?" sel":"")+'" data-a="dpick" data-id="'+ds+'" ti
 return h+'</div><div class="sub" style="margin-top:6px">Het getal onder de dag zijn de uren die je al hebt ingevuld.</div>'}
 /*ORT*/
 var ortFrom="",ortTo="";
-function ortRate(wd,m){if(wd===6)return 75;if(wd===0)return 100;if(m>=1320||m<360)return 40;if(m>=1080)return 20;if(m>=360&&m<480)return 20;return 0}
-function ortItem(it){
+function ortRate(wd,m,hol){if(hol)return 100;if(wd===6)return 75;if(wd===0)return 100;if(m>=1320||m<360)return 40;if(m>=1080)return 20;if(m>=360&&m<480)return 20;return 0}
+function ortItem(it){var hmO=hmap();
 var r={20:0,40:0,75:0,100:0};if(it.t!=="werk"||!it.s||!it.e)return r;
 var a=it.s.split(":"),b=it.e.split(":"),sm=+a[0]*60+ +a[1],df=(+b[0]*60+ +b[1])-sm;if(df<0)df+=1440;if(df<=0)return r;
 var f=1,wd0=new Date(utc(it.d)).getUTCDay();
-for(var i=0;i<df;i++){var ab=sm+i,wd=(wd0+Math.floor(ab/1440))%7,k=ortRate(wd,ab%1440);if(k)r[k]+=f}
+for(var i=0;i<df;i++){var ab=sm+i,wd=(wd0+Math.floor(ab/1440))%7,k=ortRate(wd,ab%1440,hmO[iso(utc(it.d)+Math.floor(ab/1440)*864e5)]);if(k)r[k]+=f}
 return r}
 function ortSum(list){var r={20:0,40:0,75:0,100:0};list.forEach(function(it){var x=ortItem(it);[20,40,75,100].forEach(function(k){r[k]+=x[k]})});r.eq=r[20]+r[40]+r[75]+r[100];return r}
 function ortDay(P,ds){return ortSum((P.items||[]).filter(function(i){return i.d===ds}))}
@@ -266,15 +266,15 @@ var its=(P.items||[]).filter(function(i){return i.t==="werk"&&i.d>=ortFrom&&i.d<
 var rows=[],T={20:0,40:0,75:0,100:0},eq=0;
 its.forEach(function(it){var x=ortItem(it),q=x[20]+x[40]+x[75]+x[100];if(q<.5)return;var e=x[20]+x[40]+x[75]+x[100];[20,40,75,100].forEach(function(k){T[k]+=x[k]});eq+=e;rows.push({it:it,x:x,e:e})});
 return {rows:rows,T:T,eq:eq}}
-function ortSegs(it){
+function ortSegs(it){var hmO=hmap();
 if(it.t!=="werk"||!it.s||!it.e)return [];
 var x=it.s.split(":"),y=it.e.split(":"),sm=+x[0]*60+ +x[1],df=(+y[0]*60+ +y[1])-sm;if(df<0)df+=1440;if(df<=0)return [];
 var wd0=new Date(utc(it.d)).getUTCDay(),segs=[],cur=null;
-for(var i=0;i<df;i++){var ab=sm+i,wd=(wd0+Math.floor(ab/1440))%7,k=ortRate(wd,ab%1440);
-if(!cur||cur.pct!==k){cur={pct:k,from:ab,to:ab+1};segs.push(cur)}else cur.to=ab+1}
-return segs.map(function(g){return {pct:g.pct,from:g.from,to:g.to,min:g.to-g.from}})}
+for(var i=0;i<df;i++){var ab=sm+i,wd=(wd0+Math.floor(ab/1440))%7,hn=hmO[iso(utc(it.d)+Math.floor(ab/1440)*864e5)],k=ortRate(wd,ab%1440,hn);
+if(!cur||cur.pct!==k){cur={pct:k,from:ab,to:ab+1,hol:!!hn};segs.push(cur)}else cur.to=ab+1}
+return segs.map(function(g){return {pct:g.pct,from:g.from,to:g.to,min:g.to-g.from,hol:g.hol}})}
 function ortHm(ab,end){var m=ab%1440;if(end&&m===0)return "24:00";return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")}
-function ortBlk(g,nextDayLabel){return ortHm(g.from)+"\u2013"+ortHm(g.to,true)+(g.from>=1440?" (volgende dag)":(g.to>1440?" (eindigt volgende dag)":""))}
+function ortBlk(g){return ortHm(g.from)+"\u2013"+ortHm(g.to,true)+(g.from>=1440?" (volgende dag)":(g.to>1440?" (eindigt volgende dag)":""))+(g.hol?" (feestdag)":"")}
 function ortSection(P){
 var D=ortData(P),h='<div class="card noprint"><h2>ORT-uitdraai</h2><div class="grid"><div><label>Van</label><input type="date" data-f="of" value="'+ortFrom+'"></div><div><label>Tot en met</label><input type="date" data-f="ot" value="'+ortTo+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn2" data-a="ortm" data-v="0">Deze maand</button><button class="btn2" data-a="ortm" data-v="-1">Vorige maand</button></div></div>';
 h+='<div class="card" id="ortrep"><h2>ORT-uren'+(P.name?' '+esc(P.name):'')+'</h2><div class="sub">'+sd(ortFrom)+' t/m '+sd(ortTo)+'. Per gewerkte dienst staat hieronder uit welke tijdsblokken die bestaat en welk percentage in elk blok geldt. Aantallen in uren.</div><div style="overflow-x:auto"><table class="ort"><thead><tr><th>Datum</th><th>Dienst</th><th>Tijdsblok</th><th class="r">ORT</th><th class="r">Uren</th></tr></thead><tbody>';
@@ -285,7 +285,7 @@ h+='</tbody></table></div>';
 var tt=0;h+='<h3 style="font-size:14px;margin:16px 0 4px">Totaal per percentage</h3><table class="ort"><tbody>';
 [20,40,75,100].forEach(function(k){if(D.T[k]>.5){tt+=D.T[k];h+='<tr><td>'+k+'%</td><td class="r">'+dh(D.T[k])+'</td></tr>'}});
 h+='</tbody><tfoot><tr><td>Totaal uren met ORT</td><td class="r">'+dh(tt)+'</td></tr></tfoot></table>';
-h+='<div class="sub" style="margin-top:8px">Regels: maandag t/m vrijdag 06:00\u201308:00 en 18:00\u201322:00 is 20%, 22:00\u201306:00 is 40%. Zaterdag is 75% en zondag 100%. Elk uur telt volgens de dag en tijd waarop het valt. Pauze wordt niet in mindering gebracht op de ORT-uren.</div>';
+h+='<div class="sub" style="margin-top:8px">Regels: maandag t/m vrijdag 06:00\u201308:00 en 18:00\u201322:00 is 20%, 22:00\u201306:00 is 40%. Zaterdag is 75%, zondag en feestdagen zijn 100%. Elk uur telt volgens de dag en tijd waarop het valt. Pauze wordt niet in mindering gebracht op de ORT-uren.</div>';
 h+='<div class="noprint" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" style="margin:0;width:auto;padding:10px 16px" data-a="ortprint">Afdrukken of opslaan als PDF</button><button class="btn2" data-a="ortcsv">Download CSV</button></div></div>';
 return h}
 function ortCsv(P){var D=ortData(P),L=["Datum;Dag;Dienst van;Dienst tot;Blok van;Blok tot;ORT percentage;Uren"];
@@ -359,6 +359,25 @@ if(t.id==="p")t.dataset.man="1";
 else if(t.id==="s")autoPauze();
 else if(t.id==="es"){var h=+(t.value||"0:0").split(":")[0];if(t.value&&h>=13&&$("ep"))$("ep").value=0}})});
 /*ENDPAUZE*/
+/*VX*/
+var vxFrom="",vxTo="",vxType="vak";
+function vxInit(){if(!vxFrom){var y=new Date().getFullYear();vxFrom=y+"-01-01";vxTo=y+"-12-31"}}
+function vxItems(P){vxInit();var set=vxType==="gek"?{gekocht:1}:{vakantie:1,dagdeel:1};
+return (P.items||[]).filter(function(i){return set[i.t]&&i.d>=vxFrom&&i.d<=vxTo}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0})}
+function csvSafe(t){t=String(t||"").replace(/[\r\n;]+/g," ");return /^[=+\-@]/.test(t)?"'"+t:t}
+function vxSection(P){var its=vxItems(P),tot=0,title=vxType==="gek"?"Opgenomen gekochte uren":"Opgenomen vakantie";
+var h='<div class="card noprint"><h2>Export verlof</h2><div class="grid"><div><label>Van</label><input type="date" data-f="vf" value="'+vxFrom+'"></div><div><label>Tot en met</label><input type="date" data-f="vt" value="'+vxTo+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="tab'+(vxType==="vak"?" on":"")+'" data-a="vxtype" data-v="vak">Vakantie</button><button class="tab'+(vxType==="gek"?" on":"")+'" data-a="vxtype" data-v="gek">Gekochte uren</button><button class="btn2" data-a="vxy" data-v="0">Dit jaar</button><button class="btn2" data-a="vxy" data-v="-1">Vorig jaar</button></div></div>';
+h+='<div class="card" id="vxrep"><h2>'+title+(P.name?' '+esc(P.name):'')+'</h2><div class="sub">'+sd(vxFrom)+' t/m '+sd(vxTo)+'. Aantallen in uren.</div><div style="overflow-x:auto"><table class="ort"><thead><tr><th>Datum</th><th>Soort</th><th>Tijd</th><th class="r">Uren</th><th>Reden</th></tr></thead><tbody>';
+if(!its.length)h+='<tr><td colspan="5" class="sub">Geen registraties in deze periode.</td></tr>';
+its.forEach(function(i){var m=mins(i);tot+=m;h+='<tr><td>'+nl(i.d)+'</td><td>'+esc(TYPES[i.t])+'</td><td>'+(i.s?i.s+'\u2013'+i.e:'')+'</td><td class="r">'+dh(m)+'</td><td>'+esc(i.o||'')+'</td></tr>'});
+h+='</tbody><tfoot><tr><td colspan="3">Totaal ('+its.length+' registraties)</td><td class="r">'+dh(tot)+'</td><td></td></tr></tfoot></table></div>';
+h+='<div class="noprint" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" style="margin:0;width:auto;padding:10px 16px" data-a="ortprint">Afdrukken of opslaan als PDF</button><button class="btn2" data-a="vxcsv">Download CSV</button></div></div>';
+return h}
+function vxCsv(P){var its=vxItems(P),L=["Datum;Dag;Soort;Van;Tot;Uren;Reden"],tot=0;
+its.forEach(function(i){var m=mins(i);tot+=m;L.push([i.d.split("-").reverse().join("-"),nl(i.d).split(" ")[0],TYPES[i.t],i.s||"",i.e||"",dh(m),csvSafe(i.o)].join(";"))});
+L.push(["Totaal","","","","",dh(tot),""].join(";"));
+var blob=new Blob(["\ufeff"+L.join("\r\n")],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="verlof-"+(vxType==="gek"?"gekochte-uren":"vakantie")+"-"+vxFrom+"-"+vxTo+".csv";document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u)},500)}
+/*ENDVX*/
 function viewJaar(P){
 var hm=hmap(),st={};
 (P.items||[]).forEach(function(it){var s=st[it.d]||(st[it.d]={});s[it.t]=(s[it.t]||0)+mins(it)});
@@ -417,7 +436,11 @@ $("olab").textContent=w?"Opmerkingen":"Reden";$("o").placeholder=w?"Optioneel, b
 document.addEventListener("click",function(ev){
 var b=ev.target.closest&&ev.target.closest("[data-a]");if(!b)return;
 var a=b.getAttribute("data-a"),v=b.getAttribute("data-v"),id=b.getAttribute("data-id"),P;
-if(a==="vsy"){vsY+= +v;vsForm=null;render()}
+if(a==="vxopen"){vxType=v;vxInit();sec="vx";window.scrollTo(0,0);render()}
+else if(a==="vxtype"){vxType=v;render()}
+else if(a==="vxy"){var yy2=new Date().getFullYear()+ +v;vxFrom=yy2+"-01-01";vxTo=yy2+"-12-31";render()}
+else if(a==="vxcsv"){vxCsv(people[cur])}
+else if(a==="vsy"){vsY+= +v;vsForm=null;render()}
 else if(a==="vsform"){vsForm=vsForm===v?null:v;render()}
 else if(a==="vsadd"){var vv={wet:+$("vw").value||0,bov:+$("vb").value||0,extra:+$("ve").value||0},tk=Object.keys(vv).filter(function(k){return vv[k]>0});
 if(!tk.length){alert("Vul bij minstens \u00e9\u00e9n soort verlof het aantal uren in.");return}
@@ -494,6 +517,7 @@ var e=ev.target;if(e.id==="t"){typeUI();return}
 var f=e.getAttribute&&e.getAttribute("data-f");if(!f)return;
 if(f==="pd"){peil=e.value||today();render();return}
 if(f==="of"||f==="ot"){if(f==="of")ortFrom=e.value;else ortTo=e.value;render();return}
+if(f==="vf"||f==="vt"){if(f==="vf")vxFrom=e.value;else vxTo=e.value;render();return}
 if(!people[cur])return;if(f==="tl"){var Q=clone();Q.tl=e.checked;persist(Q);return}if(f==="wd"){var Q2=clone();Q2.wd=[].slice.call(document.querySelectorAll('[data-f="wd"]:checked')).map(function(x){return +x.getAttribute("data-v")});persist(Q2);return}
 var P=clone(),m={nm:"name",ct:"ct",bs:"bs",fr:"from",to:"to"};
 P[m[f]]=(f==="ct"||f==="bs")?(+e.value||0):e.value;persist(P)});
