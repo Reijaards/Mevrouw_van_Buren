@@ -102,9 +102,9 @@ var by={werk:0,vakantie:0,ziek:0,overig:0,onbetaald:0,gekocht:0,dagdeel:0};
 (P.items||[]).forEach(function(it){if(it.d>=from&&it.d<=to)by[it.t]+=mins(it)});
 var act=by.werk+by.vakantie+by.ziek+by.overig+by.gekocht+by.dagdeel,bs=(+P.bs||0)*60,exp=Math.max(days*daily-by.onbetaald,0);
 return{days:days,hd:hd,exp:exp,by:by,act:act,bs:bs,saldo:act-exp+bs}}
-function persist(P){people[cur]=P;var row={id:cur,data:P,updated_at:new Date().toISOString()};if(cur===uid&&myEmail)row.email=myEmail;sb.from("profiles").upsert(row).then(function(r){if(r.error)alert("Opslaan mislukt: "+r.error.message)});render()}
+function persist(P){var old=people[cur],who=cur;people[cur]=P;var row={id:cur,data:P,updated_at:new Date().toISOString()};if(cur===uid&&myEmail)row.email=myEmail;sb.from("profiles").upsert(row).then(function(r){if(r.error)alert("Opslaan mislukt: "+r.error.message);else logAct(who,old?diffProfile(old,P):["Profiel aangemaakt"],"profiel")});render()}
 function clone(){return JSON.parse(JSON.stringify(people[cur]))}
-function saveHol(){sb.from("settings").upsert({key:"holidays",data:{days:hol}}).then(function(r){if(r.error)alert("Opslaan mislukt: "+r.error.message)});render()}
+function saveHol(){sb.from("settings").upsert({key:"holidays",data:{days:hol}}).then(function(r){if(r.error)alert("Opslaan mislukt: "+r.error.message);else logAct(null,["Feestdagen aangepast ("+hol.length+" in de lijst)"],"feestdagen")});render()}
 function easter(y){var a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=(h+l-7*m+114)%31+1;return Date.UTC(y,mo-1,da)}
 function nlHolidays(y){var e=easter(y),D=864e5,k=new Date(Date.UTC(y,3,27));if(k.getUTCDay()===0)k=new Date(Date.UTC(y,3,26));
 return[[Date.UTC(y,0,1),"Nieuwjaarsdag"],[e,"Eerste Paasdag"],[e+D,"Tweede Paasdag"],[+k,"Koningsdag"],[e+39*D,"Hemelvaartsdag"],[e+49*D,"Eerste Pinksterdag"],[e+50*D,"Tweede Pinksterdag"],[Date.UTC(y,11,25),"Eerste Kerstdag"],[Date.UTC(y,11,26),"Tweede Kerstdag"]].map(function(x){return{d:iso(x[0]),n:x[1]}})}
@@ -378,6 +378,43 @@ its.forEach(function(i){var m=mins(i);tot+=m;L.push([i.d.split("-").reverse().jo
 L.push(["Totaal","","","","",dh(tot),""].join(";"));
 var blob=new Blob(["\ufeff"+L.join("\r\n")],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="verlof-"+(vxType==="gek"?"gekochte-uren":"vakantie")+"-"+vxFrom+"-"+vxTo+".csv";document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u)},500)}
 /*ENDVX*/
+/*LOG*/
+var logRows=null,logSub="",logN=100,bkRows=null;
+function dlFile(name,mime,text){var blob=new Blob([text],{type:mime}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u)},500)}
+function logAct(subject,lines,kind){if(!lines||!lines.length)return;var t=lines.join("\n");if(t.length>800)t=t.slice(0,797)+"\u2026";
+sb.from("audit_log").insert({subject:subject||null,kind:kind||"profiel",summary:t,actor_email:myEmail}).then(function(r){if(r.error&&window.console)console.warn("logboek:",r.error.message)})}
+function itemTxt(i){return (TYPES[i.t]||i.t)+" "+sd(i.d)+(i.s?" "+i.s+"\u2013"+i.e:"")+((i.t!=="werk"&&i.t!=="dagdeel")?" "+dh(mins(i))+" u":"")}
+function diffProfile(a,b){
+var out=[],A={},B={},add=[],rem=[],chg=[];
+(a.items||[]).forEach(function(i){A[i.id]=i});(b.items||[]).forEach(function(i){B[i.id]=i});
+Object.keys(B).forEach(function(id){if(!A[id])add.push(B[id]);else if(JSON.stringify(A[id])!==JSON.stringify(B[id]))chg.push([A[id],B[id]])});
+Object.keys(A).forEach(function(id){if(!B[id])rem.push(A[id])});
+function lst(l,arr){if(arr.length)out.push(l+" ("+arr.length+"): "+arr.slice(0,4).map(itemTxt).join("; ")+(arr.length>4?"; \u2026":""))}
+lst("Toegevoegd",add);lst("Verwijderd",rem);
+if(chg.length)out.push("Gewijzigd ("+chg.length+"): "+chg.slice(0,3).map(function(c){return itemTxt(c[0])+" naar "+itemTxt(c[1])+(c[0].o!==c[1].o?" (opmerking aangepast)":"")}).join("; ")+(chg.length>3?"; \u2026":""));
+[["name","naam"],["ct","contracturen per week"],["bs","beginsaldo"],["from","periode van"],["to","periode t/m"]].forEach(function(f){var x=a[f[0]]==null?"":a[f[0]],y=b[f[0]]==null?"":b[f[0]];if(String(x)!==String(y))out.push("Contract: "+f[1]+" van "+(x===""?"leeg":x)+" naar "+(y===""?"leeg":y))});
+if((a.wd||[]).join()!==(b.wd||[]).join())out.push("Contract: vaste werkdagen aangepast");
+function cnt(k,l){var x=a[k]||[],y=b[k]||[],ia={},ib={};x.forEach(function(e){ia[e.id]=1});y.forEach(function(e){ib[e.id]=1});var n1=y.filter(function(e){return !ia[e.id]}).length,n2=x.filter(function(e){return !ib[e.id]}).length;if(n1)out.push(l+": "+n1+" toegevoegd");if(n2)out.push(l+": "+n2+" verwijderd")}
+cnt("vs","Vakantiesaldo");cnt("kp","Gekochte uren");
+return out}
+function pnm(id){return (people[id]&&people[id].name)||emails[id]||"onbekend"}
+function loadLog(){var q=sb.from("audit_log").select("at,actor,actor_email,subject,kind,summary").order("at",{ascending:false}).limit(logN);if(logSub)q=q.eq("subject",logSub);
+q.then(function(r){if(r.error){alert("Logboek laden mislukt: "+r.error.message);return}logRows=r.data||[];render()})}
+function logCard(){
+var h='<div class="card"><h2>Logboek</h2><div class="sub" style="margin-bottom:8px">Wie wat wanneer heeft gewijzigd. Het logboek kan vanuit de tool niet worden aangepast of verwijderd.</div><label>Filter op medewerker</label><select data-f="logsub"><option value="">Iedereen</option>'+Object.keys(people).map(function(id){return '<option value="'+esc(id)+'"'+(logSub===id?" selected":"")+'>'+esc(pnm(id))+'</option>'}).join("")+'</select><button class="btn2" style="margin-top:8px" data-a="logload">'+(logRows?"Vernieuwen":"Logboek tonen")+'</button>';
+if(logRows){if(!logRows.length)h+='<div class="empty">Geen regels gevonden.</div>';
+logRows.forEach(function(r){var when=new Date(r.at).toLocaleString("nl-NL",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+h+='<div class="ent"><div class="sub">'+esc(when)+' door '+esc(emails[r.actor]||r.actor_email||"onbekend")+(r.subject&&r.subject!==r.actor?' over '+esc(pnm(r.subject)):'')+'</div><div style="white-space:pre-line;overflow-wrap:anywhere">'+esc(r.summary)+'</div></div>'});
+if(logRows.length>=logN)h+='<button class="btn2" style="margin-top:8px" data-a="logmore">Meer tonen</button>'}
+return h+'</div>'}
+function loadBk(){sb.from("backups").select("taken_at,profile_id").order("taken_at",{ascending:false}).limit(1000).then(function(r){if(r.error){alert("Back-ups laden mislukt: "+r.error.message);return}
+var g={},o=[];(r.data||[]).forEach(function(x){if(g[x.taken_at]==null){g[x.taken_at]=0;o.push(x.taken_at)}g[x.taken_at]++});bkRows=o.map(function(t){return {t:t,n:g[t]}});render()})}
+function bkCard(){
+var h='<div class="card"><h2>Back-ups</h2><div class="sub">Elke maandag wordt automatisch een back-up per medewerker bewaard, zodra de wekelijkse taak in Supabase aanstaat. Je kunt ook nu direct een back-up downloaden. Het bestand bevat alle gegevens van alle medewerkers, dus bewaar het veilig.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn2" data-a="bknow">Back-up nu downloaden</button><button class="btn2" data-a="bklist">Bewaarde back-ups tonen</button></div>';
+if(bkRows){if(!bkRows.length)h+='<div class="empty">Nog geen bewaarde back-ups.</div>';
+bkRows.forEach(function(b){h+='<div class="row"><div>'+esc(new Date(b.t).toLocaleString("nl-NL",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"}))+'<div class="sub">'+b.n+' medewerkers</div></div><button class="btn2" data-a="bkdl" data-id="'+esc(b.t)+'">Download</button></div>'})}
+return h+'</div>'}
+/*ENDLOG*/
 function viewJaar(P){
 var hm=hmap(),st={};
 (P.items||[]).forEach(function(it){var s=st[it.d]||(st[it.d]={});s[it.t]=(s[it.t]||0)+mins(it)});
@@ -414,7 +451,7 @@ hol.slice().sort(function(a,b){return a.d<b.d?-1:1}).forEach(function(x){h+='<di
 h+="</div></div>";
 var ad='<div class="card"><h2>Beheerders</h2>';
 Object.keys(people).forEach(function(id){var isA=!!adminSet[id];ad+='<div class="row"><div><div>'+esc(people[id].name||"(zonder naam)")+(isA?'<span class="badge">Beheerder</span>':"")+'</div><div class="sub">'+esc(emails[id]||"")+'</div></div>'+(id===uid?"":'<button class="btn2" data-a="'+(isA?"rmadm":"mkadm")+'" data-id="'+id+'">'+(isA?"Beheerder verwijderen":"Beheerder maken")+'</button>')+'</div>'});
-return h+ad+'</div>'+accessCard()}
+return h+ad+'</div>'+accessCard()+bkCard()+logCard()}
 
 function render(){
 if(!loaded)return;
@@ -451,18 +488,23 @@ else if(a==="delvs"){var ve0=((people[cur]||{}).vs||[]).filter(function(x){retur
 else if(a==="ortprint"){window.print()}
 else if(a==="ortcsv"){ortCsv(people[cur])}
 else if(a==="ortm"){var n0=new Date(),m0=n0.getMonth()+ +v;ortFrom=iso(Date.UTC(n0.getFullYear(),m0,1));ortTo=iso(Date.UTC(n0.getFullYear(),m0+1,0));render()}
-else if(a==="adddom"){var dm=$("nd").value.trim().toLowerCase().replace(/^@/,"");if(!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(dm)){alert("Vul een geldig domein in, bijvoorbeeld delft.nl.");return}sb.from("allowed_domains").upsert({domain:dm}).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{if(aDom.indexOf(dm)<0)aDom.push(dm);render()}})}
-else if(a==="rmdom"){sb.from("allowed_domains").delete().eq("domain",id).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{aDom=aDom.filter(function(x){return x!==id});render()}})}
-else if(a==="addem"){var em=$("ne").value.trim().toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){alert("Vul een geldig e-mailadres in.");return}sb.from("allowed_emails").upsert({email:em}).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{if(aEm.indexOf(em)<0)aEm.push(em);render()}})}
-else if(a==="rmem"){sb.from("allowed_emails").delete().eq("email",id).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{aEm=aEm.filter(function(x){return x!==id});render()}})}
+else if(a==="logload"){loadLog()}
+else if(a==="logmore"){logN+=100;loadLog()}
+else if(a==="bknow"){dlFile("backup-"+today()+".json","application/json",JSON.stringify(Object.keys(people).map(function(id){return {id:id,email:emails[id]||"",name:people[id].name||"",data:people[id]}}),null,1));logAct(null,["Back-up gedownload (alle medewerkers)"],"backup")}
+else if(a==="bklist"){loadBk()}
+else if(a==="bkdl"){sb.from("backups").select("profile_id,email,name,data").eq("taken_at",id).then(function(r){if(r.error){alert("Downloaden mislukt: "+r.error.message);return}dlFile("backup-"+id.slice(0,10)+".json","application/json",JSON.stringify(r.data||[],null,1));logAct(null,["Bewaarde back-up gedownload ("+id.slice(0,10)+")"],"backup")})}
+else if(a==="adddom"){var dm=$("nd").value.trim().toLowerCase().replace(/^@/,"");if(!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(dm)){alert("Vul een geldig domein in, bijvoorbeeld delft.nl.");return}sb.from("allowed_domains").upsert({domain:dm}).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{if(aDom.indexOf(dm)<0)aDom.push(dm);logAct(null,["Domein toegestaan: "+dm],"toegang");render()}})}
+else if(a==="rmdom"){sb.from("allowed_domains").delete().eq("domain",id).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{aDom=aDom.filter(function(x){return x!==id});logAct(null,["Domein verwijderd: "+id],"toegang");render()}})}
+else if(a==="addem"){var em=$("ne").value.trim().toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){alert("Vul een geldig e-mailadres in.");return}sb.from("allowed_emails").upsert({email:em}).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{if(aEm.indexOf(em)<0)aEm.push(em);logAct(null,["E-mailadres toegestaan: "+em],"toegang");render()}})}
+else if(a==="rmem"){sb.from("allowed_emails").delete().eq("email",id).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{aEm=aEm.filter(function(x){return x!==id});logAct(null,["E-mailadres verwijderd: "+id],"toegang");render()}})}
 else if(a==="login"){sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value}).then(function(r){if(r.error)authUI("Inloggen mislukt: "+r.error.message,"in");else start(r.data.session)})}
 else if(a==="signup"){sb.auth.signUp({email:$("em").value.trim(),password:$("pw").value,options:{emailRedirectTo:REDIR}}).then(function(r){if(r.error)authUI("Account maken mislukt: "+r.error.message,"in");else if(r.data.session)start(r.data.session);else authUI("Gelukt. Open de link in de e-mail die je hebt ontvangen om je account te bevestigen en log daarna in.","in")})}
 else if(a==="forgot"){var e1=$("em").value.trim();if(!e1){alert("Vul eerst je e-mailadres in.");return}sb.auth.resetPasswordForEmail(e1,{redirectTo:REDIR}).then(function(r){authUI(r.error?"Mislukt: "+r.error.message:"Als dit adres bekend is, ontvang je een e-mail met een link om een nieuw wachtwoord te kiezen.","in")})}
 else if(a==="magic"){var e2=$("em").value.trim();if(!e2){alert("Vul eerst je e-mailadres in.");return}sb.auth.signInWithOtp({email:e2,options:{emailRedirectTo:REDIR,shouldCreateUser:false}}).then(function(r){authUI(r.error?"Mislukt: "+r.error.message:"Als dit adres bekend is, ontvang je een e-mail met een inloglink.","in")})}
 else if(a==="setpw"){sb.auth.updateUser({password:$("pw").value}).then(function(r){if(r.error)authUI("Mislukt: "+r.error.message,"reset");else{recovery=false;history.replaceState(null,"",location.pathname);sb.auth.getSession().then(function(x){start(x.data.session)})}})}
 else if(a==="logout"){sb.auth.signOut().then(function(){location.reload()})}
-else if(a==="mkadm"){sb.from("admins").insert({user_id:id}).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{adminSet[id]=1;render()}})}
-else if(a==="rmadm"){sb.from("admins").delete().eq("user_id",id).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{delete adminSet[id];render()}})}
+else if(a==="mkadm"){sb.from("admins").insert({user_id:id}).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{adminSet[id]=1;logAct(id,["Beheerder gemaakt: "+(emails[id]||id)],"beheerders");render()}})}
+else if(a==="rmadm"){sb.from("admins").delete().eq("user_id",id).then(function(r){if(r.error)alert("Mislukt: "+r.error.message);else{delete adminSet[id];logAct(id,["Beheerder ingetrokken: "+(emails[id]||id)],"beheerders");render()}})}
 else if(a==="sec"){sec=v;window.scrollTo(0,0);render()}
 else if(a==="dpop"){var pp=$("dpop");if(!pp.classList.contains("hide")){pp.classList.add("hide");return}var cv=$("d").value||today();dp={y:+cv.slice(0,4),m:+cv.slice(5,7)-1};pp.innerHTML=dpopHtml(people[cur]);pp.classList.remove("hide")}
 else if(a==="dmove"){dp.m+= +v;if(dp.m<0){dp.m=11;dp.y--}if(dp.m>11){dp.m=0;dp.y++}$("dpop").innerHTML=dpopHtml(people[cur])}
@@ -522,6 +564,7 @@ var f=e.getAttribute&&e.getAttribute("data-f");if(!f)return;
 if(f==="pd"){peil=e.value||today();render();return}
 if(f==="of"||f==="ot"){if(f==="of")ortFrom=e.value;else ortTo=e.value;render();return}
 if(f==="vf"||f==="vt"){if(f==="vf")vxFrom=e.value;else vxTo=e.value;render();return}
+if(f==="logsub"){logSub=e.value;loadLog();return}
 if(!people[cur])return;if(f==="tl"){var Q=clone();Q.tl=e.checked;persist(Q);return}if(f==="wd"){var Q2=clone();Q2.wd=[].slice.call(document.querySelectorAll('[data-f="wd"]:checked')).map(function(x){return +x.getAttribute("data-v")});persist(Q2);return}
 var P=clone(),m={nm:"name",ct:"ct",bs:"bs",fr:"from",to:"to"};
 P[m[f]]=(f==="ct"||f==="bs")?(+e.value||0):e.value;persist(P)});
